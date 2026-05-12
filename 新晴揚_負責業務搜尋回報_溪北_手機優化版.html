@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>新晴揚｜溪北業務回報</title>
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Noto Sans TC", "Microsoft JhengHei", Arial, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+}
+
+.header {
+  background: #111827;
+  color: white;
+  padding: 18px 16px 16px;
+  text-align: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 22px;
+  letter-spacing: 1px;
+}
+
+.header .sub {
+  margin-top: 8px;
+  font-size: 16px;
+  opacity: .9;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 14px;
+}
+
+.card {
+  background: white;
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 14px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.08);
+}
+
+.hint {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #6b7280;
+  margin: 0 0 12px;
+}
+
+label.title {
+  display: block;
+  font-size: 17px;
+  font-weight: 800;
+  margin: 18px 0 8px;
+}
+
+input, textarea {
+  width: 100%;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  padding: 14px;
+  font-size: 18px;
+  background: #fff;
+  outline: none;
+}
+
+input:focus, textarea:focus {
+  border-color: #111827;
+  box-shadow: 0 0 0 3px rgba(17,24,39,.12);
+}
+
+input[readonly] {
+  background: #f9fafb;
+  color: #111827;
+}
+
+textarea {
+  min-height: 110px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.search-list {
+  display: none;
+  margin-top: 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.item {
+  padding: 14px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 17px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.item:active {
+  background: #e5e7eb;
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 14px;
+  background: #f9fafb;
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 52px;
+}
+
+.status-pill input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.actions {
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(to top, #f3f4f6 75%, rgba(243,244,246,0));
+  padding: 12px 0 4px;
+  margin-top: 8px;
+}
+
+button {
+  width: 100%;
+  border: none;
+  border-radius: 16px;
+  background: #111827;
+  color: white;
+  padding: 16px;
+  font-size: 19px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .65;
+}
+
+#msg {
+  text-align: center;
+  margin-top: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.meta-row {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 420px) {
+  .wrap {
+    padding: 10px;
+  }
+  .card {
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .status-grid {
+    grid-template-columns: 1fr;
+  }
+  .header h1 {
+    font-size: 20px;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>新晴揚業務回報</h1>
+  <div class="sub">溪北 負責客戶</div>
+</div>
+
+<div class="wrap">
+  <div class="card">
+    <p class="hint">輸入客戶關鍵字後點選正確客戶。跨區客戶以「負責業務」為準。</p>
+
+    <label class="title">搜尋客戶</label>
+    <input id="customerSearch" placeholder="例：宏、永、大、260" oninput="searchCustomers()" autocomplete="off">
+    <div id="customerList" class="search-list"></div>
+
+    <div class="meta-row">
+      <div>
+        <label class="title">已選客戶</label>
+        <input id="customer" placeholder="請先搜尋並點選客戶" readonly>
+      </div>
+
+      <div>
+        <label class="title">客戶所在地區</label>
+        <input id="customerRegion" placeholder="選客戶後自動帶入" readonly>
+      </div>
+    </div>
+
+    <label class="title">今日狀況</label>
+    <div class="status-grid">
+      <label class="status-pill"><input type="checkbox" value="有下單" class="status">有下單</label>
+      <label class="status-pill"><input type="checkbox" value="有收款" class="status">有收款</label>
+      <label class="status-pill"><input type="checkbox" value="問價格" class="status">問價格</label>
+      <label class="status-pill"><input type="checkbox" value="有抱怨" class="status">有抱怨</label>
+      <label class="status-pill"><input type="checkbox" value="問電池" class="status">問電池</label>
+      <label class="status-pill"><input type="checkbox" value="問機油" class="status">問機油</label>
+      <label class="status-pill"><input type="checkbox" value="有設備商機" class="status">設備商機</label>
+      <label class="status-pill"><input type="checkbox" value="被競品搶單" class="status">競品搶單</label>
+      <label class="status-pill"><input type="checkbox" value="需要老闆協助" class="status">需老闆協助</label>
+    </div>
+
+    <label class="title">備註</label>
+    <textarea id="note" placeholder="可用手機語音輸入，例如：老闆說月底可能要換AGM，最近被別家報低價。"></textarea>
+
+    <label class="title">下次追蹤日期</label>
+    <input id="nextDate" type="date">
+
+    <div class="actions">
+      <button id="submitBtn" onclick="submitForm()">送出回報</button>
+      <div id="msg"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycbzYMJB4rHiw_IVIa8lEVJnpphq3dABTYGZYFSTLbMav5cSBSbNFzKQD4IRDe1hLVTqNZQ/exec";
+const OWNER = "溪北";
+let customers = [];
+
+async function loadCustomers() {
+  const msg = document.getElementById("msg");
+  msg.style.color = "#666";
+  msg.innerText = "正在載入客戶名單...";
+
+  try {
+    const res = await fetch(API_URL + "?mode=customers&owner=" + encodeURIComponent(OWNER));
+    const data = await res.json();
+
+    customers = data
+      .filter(x => String(x.owner || "").trim() === OWNER)
+      .map(x => ({
+        name: String(x.customer || "").trim(),
+        region: String(x.region || "").trim(),
+        zone: String(x.zone || "").trim(),
+        owner: String(x.owner || "").trim()
+      }))
+      .filter(x => x.name);
+
+    msg.style.color = "green";
+    msg.innerText = "✅ 客戶名單已載入：" + customers.length + "筆";
+  } catch (err) {
+    msg.style.color = "red";
+    msg.innerText = "❌ 客戶名單載入失敗，請檢查 Apps Script 與客戶主檔欄位";
+    console.error(err);
+  }
+}
+
+function searchCustomers() {
+  const keyword = document.getElementById("customerSearch").value.trim().toLowerCase();
+  const list = document.getElementById("customerList");
+  list.innerHTML = "";
+
+  document.getElementById("customer").value = "";
+  document.getElementById("customerRegion").value = "";
+
+  if (!keyword) {
+    list.style.display = "none";
+    return;
+  }
+
+  const results = customers
+    .filter(c => (c.name + " " + c.region + " " + c.zone).toLowerCase().includes(keyword))
+    .slice(0, 30);
+
+  if (!results.length) {
+    list.style.display = "block";
+    list.innerHTML = '<div class="item">找不到客戶，可換關鍵字，或請內勤確認客戶主檔</div>';
+    return;
+  }
+
+  results.forEach(c => {
+    const div = document.createElement("div");
+    div.className = "item";
+    div.textContent = (c.zone ? c.zone + "｜" : "") + (c.region ? c.region + "｜" : "") + c.name;
+    div.onclick = () => {
+      document.getElementById("customer").value = c.name;
+      document.getElementById("customerRegion").value = c.region;
+      document.getElementById("customerSearch").value = c.name;
+      list.style.display = "none";
+    };
+    list.appendChild(div);
+  });
+
+  list.style.display = "block";
+}
+
+async function submitForm() {
+  const btn = document.getElementById("submitBtn");
+  const msg = document.getElementById("msg");
+
+  const sales = OWNER;
+  const owner = OWNER;
+  const customer = document.getElementById("customer").value.trim();
+  const region = document.getElementById("customerRegion").value.trim();
+  const note = document.getElementById("note").value.trim();
+  const nextDate = document.getElementById("nextDate").value;
+
+  const statuses = Array.from(document.querySelectorAll(".status:checked"))
+    .map(el => el.value)
+    .join("、");
+
+  if (!customer) {
+    alert("請先搜尋並點選客戶");
+    return;
+  }
+
+  const data = { sales, owner, region, customer, statuses, note, nextDate };
+
+  btn.disabled = true;
+  btn.innerText = "送出中...";
+  msg.style.color = "#666";
+  msg.innerText = "正在送出...";
+
+  try {
+    await fetch(API_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(data)
+    });
+
+    msg.style.color = "green";
+    msg.innerText = "✅ 已送出";
+
+    document.getElementById("customerSearch").value = "";
+    document.getElementById("customer").value = "";
+    document.getElementById("customerRegion").value = "";
+    document.getElementById("note").value = "";
+    document.getElementById("nextDate").value = "";
+    document.querySelectorAll(".status").forEach(el => el.checked = false);
+
+  } catch (err) {
+    msg.style.color = "red";
+    msg.innerText = "❌ 送出失敗";
+    console.error(err);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "送出回報";
+  }
+}
+
+loadCustomers();
+</script>
+
+</body>
+</html>
