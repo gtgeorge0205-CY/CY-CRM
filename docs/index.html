@@ -972,15 +972,26 @@ function toggleHistoryPanel(){
     return;
   }
 
-  const history=currentCustomer.history||[];
-
-  if(!history.length){
-    p.innerHTML='沒有歷史';
-    p.style.display='block';
+  if(!currentCustomer){
     return;
   }
 
-  p.innerHTML=history.map(function(h){
+  p.innerHTML='載入中...';
+  p.style.display='block';
+
+  jsonp({
+    action:'getCustomerHistory',
+    customerName:currentCustomer.customerName
+  }).then(function(data){
+    currentCustomer.history=Array.isArray(data) ? data : [];
+    renderHistoryPanel(p,currentCustomer.history);
+  }).catch(function(err){
+    renderHistoryPanel(p,currentCustomer.history||[],err);
+  });
+}
+
+function renderHistoryPanel(panel,history,err){
+  panel.innerHTML=history.map(function(h){
     return `
       <div class="hist-item">
         <div class="hist-time">${escapeHtml(h.time)}</div>
@@ -990,7 +1001,17 @@ function toggleHistoryPanel(){
     `;
   }).join('');
 
-  p.style.display='block';
+  if(!history.length){
+    panel.innerHTML='沒有歷史';
+  }
+
+  if(err){
+    panel.innerHTML=
+      '<div class="hist-item" style="color:#c62828;font-weight:900;">歷史載入失敗：'+
+      escapeHtml(err.message)+
+      '</div>'+
+      (history.length ? panel.innerHTML : '<div class="hist-item">沒有離線歷史</div>');
+  }
 }
 
 function openMap(){
