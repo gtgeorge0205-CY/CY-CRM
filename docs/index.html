@@ -438,7 +438,7 @@ textarea{
     <div class="topbar">
       <div class="title-row">
         <div class="menu-icon">☰</div>
-        <div class="title">客戶列表｜GitHub Pages 測試版</div>
+        <div class="title" id="pageTitle">客戶列表｜老闆版</div>
       </div>
 
       <div class="search-wrap">
@@ -484,7 +484,7 @@ textarea{
       </div>
 
       <div class="section">
-        <div class="action-title">第二優先：電話 / 歷史</div>
+        <div class="action-title">聯絡與紀錄</div>
         <div class="action-grid">
           <button class="action-btn phone" onclick="togglePhonePanel()">📞 電話</button>
           <button class="action-btn history" onclick="toggleHistoryPanel()">📜 歷史</button>
@@ -494,7 +494,7 @@ textarea{
       </div>
 
       <div class="section">
-        <div class="action-title">第三優先</div>
+        <div class="action-title">其他功能</div>
         <div class="action-grid">
           <button class="action-btn nav" onclick="openMap()">🧭 導航</button>
           <button class="action-btn photo" onclick="alert('照片功能下一版')">📷 照片</button>
@@ -589,6 +589,7 @@ if(window.visualViewport){
 }
 
 render(customers);
+updatePageTitle();
 loadRealCustomers();
 
 searchInput.addEventListener('focus',syncViewport);
@@ -721,6 +722,27 @@ function getMode(){
   }
 
   return 'boss';
+}
+
+function updatePageTitle(){
+  const mode=getMode();
+  const title=document.getElementById('pageTitle');
+
+  if(!title){
+    return;
+  }
+
+  if(mode==='north'){
+    title.innerText='客戶列表｜溪北';
+    return;
+  }
+
+  if(mode==='south'){
+    title.innerText='客戶列表｜溪南';
+    return;
+  }
+
+  title.innerText='客戶列表｜老闆版';
 }
 
 function applySearch(){
