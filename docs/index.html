@@ -847,31 +847,66 @@ function renderDetail(){
 }
 
 function getSubText(c){
-  if(c.lastStatus){
-    return c.lastStatus+'｜'+(c.lastVisit||'無日期');
+  const lastStatus=hasValue(c.lastStatus) ? String(c.lastStatus).trim() : '';
+  const lastVisit=hasValue(c.lastVisit) ? String(c.lastVisit).trim() : '';
+
+  if(lastStatus){
+    return lastStatus+'｜'+(lastVisit||'無日期');
   }
 
-  if(Number(c.days||0)>=8){
-    return c.days+'天未拜訪';
+  if(!lastVisit){
+    return '尚無拜訪紀錄';
   }
 
-  return '今日已拜訪';
+  const days=getValidDays(c.days);
+
+  if(days!==null && days>0){
+    return days+'天未拜訪';
+  }
+
+  if(days===0){
+    return '今日已拜訪';
+  }
+
+  return '最後拜訪｜'+lastVisit;
 }
 
 function getBadge(c){
-  if(c.lastStatus){
+  if(hasValue(c.lastStatus)){
     return {text:'已回報',cls:'badge-green'};
   }
 
-  if(Number(c.days||0)>=15){
+  if(!hasValue(c.lastVisit)){
+    return {text:'未回報',cls:'badge-red'};
+  }
+
+  const days=getValidDays(c.days);
+
+  if(days!==null && days>=15){
     return {text:'久未拜訪',cls:'badge-gray'};
   }
 
-  if(Number(c.days||0)>=8){
+  if(days!==null && days>=8){
     return {text:'待追蹤',cls:'badge-orange'};
   }
 
   return {text:'未回報',cls:'badge-red'};
+}
+
+function hasValue(value){
+  return value!==null &&
+         value!==undefined &&
+         String(value).trim()!=='';
+}
+
+function getValidDays(value){
+  if(!hasValue(value)){
+    return null;
+  }
+
+  const days=Number(String(value).trim());
+
+  return isFinite(days) ? days : null;
 }
 
 function pickStatus(btn,status){
