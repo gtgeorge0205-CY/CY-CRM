@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>新晴揚 CRM 測試版</title>
+
+<style>
+:root{
+  --app-h:100svh;
+}
+
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,
+body{
+  margin:0;
+  padding:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  overflow-x:hidden;
+  background:#f4f6fb;
+  color:#111827;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+button,
+input,
+textarea{
+  font:inherit;
+}
+
+input,
+textarea{
+  font-size:20px;
+}
+
+button{
+  border:none;
+  touch-action:manipulation;
+}
+
+#app{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:var(--app-h);
+  overflow:hidden;
+  overflow-x:hidden;
+  background:#f4f6fb;
+}
+
+.view{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow-y:auto;
+  overflow-x:hidden;
+  -webkit-overflow-scrolling:touch;
+  background:#f4f6fb;
+}
+
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:#ffffff;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 12px;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.title-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.menu-icon{
+  flex:0 0 auto;
+  color:#2f80ed;
+  font-size:30px;
+  font-weight:900;
+}
+
+.title{
+  flex:1;
+  min-width:0;
+  text-align:right;
+  font-size:28px;
+  line-height:1.15;
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.search-wrap{
+  position:relative;
+  margin-top:12px;
+}
+
+.search{
+  width:100%;
+  border:2px solid #bfdbfe;
+  border-radius:18px;
+  padding:15px 48px 15px 16px;
+  background:#ffffff;
+  outline:none;
+  font-weight:800;
+}
+
+.clear-btn{
+  position:absolute;
+  right:10px;
+  top:10px;
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  background:#e5e7eb;
+  color:#4b5563;
+  font-size:22px;
+  font-weight:900;
+  display:none;
+}
+
+.result-count{
+  padding:12px 14px 4px;
+  color:#6b7280;
+  font-size:20px;
+  font-weight:900;
+}
+
+.list{
+  padding:8px 12px calc(120px + env(safe-area-inset-bottom));
+}
+
+.card{
+  width:100%;
+  margin-bottom:11px;
+  padding:14px;
+  border-radius:20px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  overflow:hidden;
+}
+
+.card-main{
+  display:grid;
+  grid-template-columns:58px minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+}
+
+.avatar{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#ffffff;
+  font-size:27px;
+  font-weight:900;
+}
+
+.blue{background:#2f80ed}
+.green{background:#27ae60}
+.orange{background:#f2994a}
+.purple{background:#7b61ff}
+.red{background:#eb5757}
+.teal{background:#00a99d}
+
+.info{
+  min-width:0;
+  overflow:hidden;
+}
+
+.name{
+  font-size:29px;
+  line-height:1.12;
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.meta{
+  margin-top:5px;
+  color:#4b5563;
+  font-size:19px;
+  line-height:1.25;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.badge{
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:15px;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.badge-red{background:#ffe5e5;color:#c62828}
+.badge-green{background:#dcfce7;color:#15803d}
+.badge-orange{background:#fff3d7;color:#b45309}
+.badge-gray{background:#e5e7eb;color:#374151}
+
+.empty{
+  padding:60px 20px;
+  text-align:center;
+  color:#777777;
+  font-size:22px;
+}
+
+#detailView{
+  display:none;
+  z-index:40;
+}
+
+.detail-top{
+  position:sticky;
+  top:0;
+  z-index:30;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:calc(10px + env(safe-area-inset-top)) 14px 10px;
+  background:#f4f6fb;
+}
+
+.back-btn{
+  padding:12px 16px;
+  border-radius:16px;
+  background:#ffffff;
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+  font-size:22px;
+  font-weight:900;
+}
+
+.detail-title{
+  color:#374151;
+  font-size:25px;
+  font-weight:900;
+}
+
+.detail-content{
+  padding:0 12px calc(120px + env(safe-area-inset-bottom));
+}
+
+.customer-head,
+.section{
+  margin-bottom:14px;
+  padding:16px;
+  border-radius:22px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  overflow:hidden;
+}
+
+.customer-head{
+  display:grid;
+  grid-template-columns:68px minmax(0,1fr);
+  gap:14px;
+  align-items:center;
+}
+
+.detail-avatar{
+  width:68px;
+  height:68px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#2f80ed;
+  color:#ffffff;
+  font-size:32px;
+  font-weight:900;
+}
+
+.detail-name{
+  font-size:34px;
+  line-height:1.12;
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.detail-meta{
+  margin-top:6px;
+  color:#4b5563;
+  font-size:21px;
+  line-height:1.35;
+}
+
+.detail-badge-wrap{
+  margin-top:10px;
+}
+
+.section-title{
+  margin-bottom:12px;
+  font-size:26px;
+  font-weight:900;
+}
+
+.report-section{
+  border:2px solid #bfdbfe;
+  background:#eff6ff;
+}
+
+.report-grid,
+.action-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.report-choice{
+  width:100%;
+  min-height:62px;
+  padding:12px 8px;
+  border-radius:16px;
+  background:#ffffff;
+  color:#1e88e5;
+  font-size:22px;
+  font-weight:900;
+}
+
+.report-choice.selected{
+  background:#2f80ed;
+  color:#ffffff;
+}
+
+textarea{
+  width:100%;
+  min-height:96px;
+  margin-top:10px;
+  padding:15px;
+  border:none;
+  border-radius:16px;
+  outline:none;
+  resize:none;
+  background:#ffffff;
+}
+
+.send{
+  width:100%;
+  margin-top:10px;
+  padding:17px;
+  border-radius:16px;
+  background:#2f80ed;
+  color:#ffffff;
+  font-size:26px;
+  font-weight:900;
+}
+
+.action-title{
+  margin-bottom:10px;
+  font-size:22px;
+  font-weight:900;
+}
+
+.action-btn{
+  width:100%;
+  min-height:66px;
+  padding:14px 8px;
+  border-radius:18px;
+  font-size:23px;
+  font-weight:900;
+}
+
+.phone{background:#dcfce7;color:#166534}
+.history{background:#ede9fe;color:#5b21b6}
+.nav{background:#f3f4f6;color:#374151}
+.photo{background:#f3f4f6;color:#374151}
+
+.panel{
+  display:none;
+  margin-top:12px;
+  padding:12px;
+  border-radius:16px;
+  background:#f8fafc;
+  overflow:hidden;
+}
+
+.phone-link{
+  display:block;
+  width:100%;
+  margin-bottom:9px;
+  padding:16px;
+  border-radius:16px;
+  background:#2f80ed;
+  color:#ffffff;
+  text-align:center;
+  text-decoration:none;
+  font-size:25px;
+  font-weight:900;
+}
+
+.hist-item{
+  padding:10px 0;
+  border-bottom:1px solid #e5e7eb;
+  font-size:18px;
+  line-height:1.45;
+}
+
+.hist-time{
+  margin-bottom:3px;
+  color:#2563eb;
+  font-weight:900;
+}
+
+.close-bottom{
+  width:100%;
+  margin-top:4px;
+  padding:17px;
+  border-radius:18px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  font-size:24px;
+  font-weight:900;
+}
+</style>
+</head>
+
+<body>
+<div id="app">
+  <div class="view" id="homeView">
+    <div class="topbar">
+      <div class="title-row">
+        <div class="menu-icon">☰</div>
+        <div class="title">客戶列表｜GitHub Pages 測試版</div>
+      </div>
+
+      <div class="search-wrap">
+        <input class="search" id="search" placeholder="搜尋客戶名稱 / 電話 / 專案">
+        <button class="clear-btn" id="clearBtn" onclick="clearSearch()">×</button>
+      </div>
+    </div>
+
+    <div class="result-count" id="resultCount">資料載入中...</div>
+    <div class="list" id="list"></div>
+  </div>
+
+  <div class="view" id="detailView">
+    <div class="detail-top">
+      <button class="back-btn" onclick="closeDetail()">‹ 返回</button>
+      <div class="detail-title">客戶動作</div>
+    </div>
+
+    <div class="detail-content">
+      <div class="customer-head">
+        <div class="detail-avatar" id="detailAvatar">客</div>
+        <div>
+          <div class="detail-name" id="detailName">客戶名稱</div>
+          <div class="detail-meta" id="detailMeta">狀態</div>
+          <div class="detail-badge-wrap">
+            <span class="badge badge-red" id="detailBadge">未回報</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="section report-section">
+        <div class="section-title">📝 拜訪回報</div>
+        <div class="report-grid">
+          <button class="report-choice" onclick="pickStatus(this,'✅ 成交')">✅ 成交</button>
+          <button class="report-choice" onclick="pickStatus(this,'🔥 機會')">🔥 機會</button>
+          <button class="report-choice" onclick="pickStatus(this,'📌 追蹤')">📌 追蹤</button>
+          <button class="report-choice" onclick="pickStatus(this,'💰 收款')">💰 收款</button>
+          <button class="report-choice" onclick="pickStatus(this,'⚠️ 異常')">⚠️ 異常</button>
+          <button class="report-choice" onclick="pickStatus(this,'🚫 沒遇到')">🚫 沒遇到</button>
+        </div>
+        <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
+        <button class="send" onclick="submitReport()">送出回報</button>
+      </div>
+
+      <div class="section">
+        <div class="action-title">第二優先：電話 / 歷史</div>
+        <div class="action-grid">
+          <button class="action-btn phone" onclick="togglePhonePanel()">📞 電話</button>
+          <button class="action-btn history" onclick="toggleHistoryPanel()">📜 歷史</button>
+        </div>
+        <div class="panel" id="phonePanel"></div>
+        <div class="panel" id="historyPanel"></div>
+      </div>
+
+      <div class="section">
+        <div class="action-title">第三優先</div>
+        <div class="action-grid">
+          <button class="action-btn nav" onclick="openMap()">🧭 導航</button>
+          <button class="action-btn photo" onclick="alert('照片功能下一版')">📷 照片</button>
+        </div>
+      </div>
+
+      <button class="close-bottom" onclick="closeDetail()">關閉</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const customers=[
+  {
+    customerCode:'A001',
+    customerName:'永順汽車材料行',
+    region:'溪南',
+    owner:'溪南',
+    phone:'06-222-1688 / 0912-345-678',
+    address:'台南市南區金華路二段',
+    days:3,
+    lastVisit:'2026/05/25 09:30',
+    lastStatus:'✅ 成交',
+    lastNote:'AGM 電池補貨 6 顆',
+    history:[
+      {time:'2026/05/25 09:30',status:'✅ 成交',note:'AGM 電池補貨 6 顆'},
+      {time:'2026/05/18 11:10',status:'📌 追蹤',note:'詢問 VARTA 報價'}
+    ]
+  },
+  {
+    customerCode:'A002',
+    customerName:'宏達輪胎電機',
+    region:'溪北',
+    owner:'溪北',
+    phone:'06-635-8899',
+    address:'台南市新營區民治路',
+    days:12,
+    lastVisit:'',
+    lastStatus:'',
+    lastNote:'',
+    history:[
+      {time:'2026/05/10 15:20',status:'🔥 機會',note:'老闆說月底可能叫貨'}
+    ]
+  },
+  {
+    customerCode:'A003',
+    customerName:'佳里順發保修廠',
+    region:'佳里',
+    owner:'溪北',
+    phone:'0910-222-333、06-722-3100',
+    address:'台南市佳里區延平路',
+    days:18,
+    lastVisit:'',
+    lastStatus:'',
+    lastNote:'',
+    history:[]
+  },
+  {
+    customerCode:'A004',
+    customerName:'東區明昌汽車',
+    region:'東區',
+    owner:'溪南',
+    phone:'',
+    address:'台南市東區中華東路',
+    days:0,
+    lastVisit:'2026/05/26 08:50',
+    lastStatus:'📌 追蹤',
+    lastNote:'下週看 EFB 庫存',
+    history:[
+      {time:'2026/05/26 08:50',status:'📌 追蹤',note:'下週看 EFB 庫存'},
+      {time:'2026/05/11 10:00',status:'⚠️ 異常',note:'舊帳款待確認'}
+    ]
+  }
+];
+
+let viewCustomers=[];
+let currentCustomer=null;
+let selectedStatus='';
+
+const searchInput=document.getElementById('search');
+const clearBtn=document.getElementById('clearBtn');
+
+syncViewport();
+window.addEventListener('resize',syncViewport);
+
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize',syncViewport);
+}
+
+render(customers);
+
+searchInput.addEventListener('focus',syncViewport);
+
+searchInput.addEventListener('input',function(){
+  const key=this.value.trim();
+  clearBtn.style.display=key ? 'block' : 'none';
+
+  render(customers.filter(function(c){
+    return getSearchText(c).includes(key);
+  }));
+
+  syncViewport();
+});
+
+searchInput.addEventListener('keydown',function(e){
+  if(e.key==='Enter'){
+    this.blur();
+    syncViewport();
+  }
+});
+
+function syncViewport(){
+  let h=window.innerHeight;
+
+  if(window.visualViewport && window.visualViewport.height){
+    h=window.visualViewport.height;
+  }
+
+  document.documentElement.style.setProperty('--app-h',Math.floor(h)+'px');
+  document.documentElement.scrollLeft=0;
+  document.body.scrollLeft=0;
+
+  const app=document.getElementById('app');
+  const home=document.getElementById('homeView');
+  const detail=document.getElementById('detailView');
+
+  if(app) app.scrollLeft=0;
+  if(home) home.scrollLeft=0;
+  if(detail) detail.scrollLeft=0;
+}
+
+function clearSearch(){
+  searchInput.value='';
+  clearBtn.style.display='none';
+  render(customers);
+  searchInput.blur();
+  syncViewport();
+}
+
+function render(data){
+  viewCustomers=data||[];
+  document.getElementById('resultCount').innerText='搜尋結果（'+viewCustomers.length+'）';
+
+  const list=document.getElementById('list');
+
+  if(!viewCustomers.length){
+    list.innerHTML='<div class="empty">找不到客戶</div>';
+    return;
+  }
+
+  list.innerHTML=viewCustomers.map(function(c,i){
+    const color=['blue','green','orange','purple','teal','red'][i%6];
+    const word=(c.customerName||'?').substring(0,1);
+    const badge=getBadge(c);
+
+    return `
+      <div class="card" onclick="openDetail(${i})">
+        <div class="card-main">
+          <div class="avatar ${color}">${escapeHtml(word)}</div>
+          <div class="info">
+            <div class="name">${escapeHtml(c.customerName)}</div>
+            <div class="meta">${escapeHtml(getSubText(c))}</div>
+          </div>
+          <span class="badge ${badge.cls}">${badge.text}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openDetail(i){
+  if(document.activeElement){
+    document.activeElement.blur();
+  }
+
+  currentCustomer=viewCustomers[i];
+  selectedStatus='';
+
+  if(!currentCustomer){
+    return;
+  }
+
+  document.querySelectorAll('.report-choice').forEach(function(b){
+    b.classList.remove('selected');
+  });
+
+  document.getElementById('reportNote').value='';
+  renderDetail();
+
+  document.getElementById('homeView').style.display='none';
+  document.getElementById('detailView').style.display='block';
+  document.getElementById('detailView').scrollTop=0;
+  syncViewport();
+}
+
+function closeDetail(){
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('homeView').style.display='block';
+  syncViewport();
+}
+
+function renderDetail(){
+  const c=currentCustomer;
+  const badge=getBadge(c);
+
+  document.getElementById('detailAvatar').innerText=(c.customerName||'?').substring(0,1);
+  document.getElementById('detailName').innerText=c.customerName||'';
+  document.getElementById('detailMeta').innerText=getSubText(c);
+
+  const b=document.getElementById('detailBadge');
+  b.innerText=badge.text;
+  b.className='badge '+badge.cls;
+
+  document.getElementById('phonePanel').style.display='none';
+  document.getElementById('historyPanel').style.display='none';
+  document.getElementById('phonePanel').innerHTML='';
+  document.getElementById('historyPanel').innerHTML='';
+}
+
+function getSubText(c){
+  if(c.lastStatus){
+    return c.lastStatus+'｜'+(c.lastVisit||'無日期');
+  }
+
+  if(Number(c.days||0)>=8){
+    return c.days+'天未拜訪';
+  }
+
+  return '今日已拜訪';
+}
+
+function getBadge(c){
+  if(c.lastStatus){
+    return {text:'已回報',cls:'badge-green'};
+  }
+
+  if(Number(c.days||0)>=15){
+    return {text:'久未拜訪',cls:'badge-gray'};
+  }
+
+  if(Number(c.days||0)>=8){
+    return {text:'待追蹤',cls:'badge-orange'};
+  }
+
+  return {text:'未回報',cls:'badge-red'};
+}
+
+function pickStatus(btn,status){
+  selectedStatus=status;
+
+  document.querySelectorAll('.report-choice').forEach(function(b){
+    b.classList.remove('selected');
+  });
+
+  btn.classList.add('selected');
+}
+
+function submitReport(){
+  if(!currentCustomer){
+    return;
+  }
+
+  if(!selectedStatus){
+    alert('請先選擇狀態');
+    return;
+  }
+
+  const note=document.getElementById('reportNote').value.trim();
+
+  currentCustomer.lastStatus=selectedStatus;
+  currentCustomer.lastVisit='測試時間';
+  currentCustomer.lastNote=note;
+  currentCustomer.history.unshift({
+    time:'測試時間',
+    status:selectedStatus,
+    note:note
+  });
+
+  alert('測試回報已暫存在畫面中');
+  renderDetail();
+  render(customers);
+}
+
+function togglePhonePanel(){
+  const p=document.getElementById('phonePanel');
+
+  if(p.style.display==='block'){
+    p.style.display='none';
+    return;
+  }
+
+  if(!currentCustomer.phone){
+    p.innerHTML='沒有電話';
+    p.style.display='block';
+    return;
+  }
+
+  const phones=String(currentCustomer.phone)
+    .split(/[\/、,，;；\n]+/)
+    .map(function(x){return x.trim();})
+    .filter(function(x){return x;});
+
+  p.innerHTML=phones.map(function(ph){
+    const clean=ph.replace(/[^0-9+*#]/g,'');
+    return `<a class="phone-link" href="tel:${clean}">${escapeHtml(ph)}</a>`;
+  }).join('');
+
+  p.style.display='block';
+}
+
+function toggleHistoryPanel(){
+  const p=document.getElementById('historyPanel');
+
+  if(p.style.display==='block'){
+    p.style.display='none';
+    return;
+  }
+
+  const history=currentCustomer.history||[];
+
+  if(!history.length){
+    p.innerHTML='沒有歷史';
+    p.style.display='block';
+    return;
+  }
+
+  p.innerHTML=history.map(function(h){
+    return `
+      <div class="hist-item">
+        <div class="hist-time">${escapeHtml(h.time)}</div>
+        <b>${escapeHtml(h.status)}</b><br>
+        ${escapeHtml(h.note||'')}
+      </div>
+    `;
+  }).join('');
+
+  p.style.display='block';
+}
+
+function openMap(){
+  if(!currentCustomer){
+    return;
+  }
+
+  const q=currentCustomer.address||currentCustomer.customerName;
+
+  window.open(
+    'https://www.google.com/maps/search/?api=1&query='+
+    encodeURIComponent(q)
+  );
+}
+
+function getSearchText(c){
+  return [
+    c.customerCode,
+    c.customerName,
+    c.region,
+    c.owner,
+    c.phone,
+    c.address,
+    c.lastStatus,
+    c.lastNote
+  ].join(' ');
+}
+
+function escapeHtml(text){
+  return String(text||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+}
+</script>
+</body>
+</html>
