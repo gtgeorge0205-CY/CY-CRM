@@ -253,7 +253,7 @@ button{
 }
 
 .detail-content{
-  padding:0 12px calc(120px + env(safe-area-inset-bottom));
+  padding:0 12px calc(220px + env(safe-area-inset-bottom));
 }
 
 .customer-head,
@@ -363,6 +363,10 @@ textarea{
   font-weight:900;
 }
 
+.send:disabled{
+  opacity:.65;
+}
+
 .action-title{
   margin-bottom:10px;
   font-size:22px;
@@ -447,8 +451,10 @@ textarea{
       </div>
     </div>
 
-    <div class="result-count" id="resultCount">資料載入中...</div>
-    <div class="list" id="list"></div>
+    <div class="result-count" id="resultCount">真實資料載入中...</div>
+    <div class="list" id="list">
+      <div class="empty">真實資料載入中...</div>
+    </div>
   </div>
 
   <div class="view" id="detailView">
@@ -477,10 +483,10 @@ textarea{
           <button class="report-choice" onclick="pickStatus(this,'📌 追蹤')">📌 追蹤</button>
           <button class="report-choice" onclick="pickStatus(this,'💰 收款')">💰 收款</button>
           <button class="report-choice" onclick="pickStatus(this,'⚠️ 異常')">⚠️ 異常</button>
-          <button class="report-choice" onclick="pickStatus(this,'🚫 沒遇到')">🚫 沒遇到</button>
+          <button class="report-choice" onclick="pickStatus(this,'☎️ 電訪 / 沒遇到')">☎️ 電訪 / 沒遇到</button>
         </div>
         <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
-        <button class="send" onclick="submitReport()">送出回報</button>
+        <button class="send" id="sendReportBtn" onclick="submitReport()">送出回報</button>
       </div>
 
       <div class="section">
@@ -573,13 +579,15 @@ const fallbackCustomers=[
   }
 ];
 
-let customers=fallbackCustomers.slice();
+let customers=[];
 let viewCustomers=[];
 let currentCustomer=null;
 let selectedStatus='';
+let isSubmittingReport=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
+const reportNote=document.getElementById('reportNote');
 
 syncViewport();
 window.addEventListener('resize',syncViewport);
@@ -588,7 +596,6 @@ if(window.visualViewport){
   window.visualViewport.addEventListener('resize',syncViewport);
 }
 
-render(customers);
 updatePageTitle();
 loadRealCustomers();
 
@@ -612,6 +619,14 @@ searchInput.addEventListener('keydown',function(e){
   }
 });
 
+reportNote.addEventListener('focus',function(){
+  keepReportNoteVisible();
+});
+
+reportNote.addEventListener('input',function(){
+  keepReportNoteVisible();
+});
+
 function syncViewport(){
   let h=window.innerHeight;
 
@@ -632,6 +647,12 @@ function syncViewport(){
   if(detail) detail.scrollLeft=0;
 }
 
+function keepReportNoteVisible(){
+  setTimeout(function(){
+    reportNote.scrollIntoView({block:'center'});
+  },300);
+}
+
 function clearSearch(){
   searchInput.value='';
   clearBtn.style.display='none';
@@ -647,12 +668,17 @@ function loadRealCustomers(){
     action:'getCustomers',
     mode:mode
   }).then(function(data){
-    customers=(data||[]).map(normalizeCustomer);
+    customers=(data||[]).map(normalizeCustomer).sort(compareCustomers);
     applySearch();
     syncViewport();
   }).catch(function(err){
-    document.getElementById('resultCount').innerText=
-      'API讀取失敗，使用測試資料（'+customers.length+'）：'+err.message;
+    customers=[];
+    viewCustomers=[];
+    document.getElementById('resultCount').innerText='資料載入失敗';
+    document.getElementById('list').innerHTML=
+      '<div class="empty" style="color:#c62828">資料載入失敗<br>'+
+      escapeHtml(err.message)+
+      '</div>';
     syncViewport();
   });
 }
@@ -766,6 +792,47 @@ function normalizeCustomer(c){
   return c;
 }
 
+function compareCustomers(a,b){
+  const pa=getCustomerSortPriority(a);
+  const pb=getCustomerSortPriority(b);
+
+  if(pa!==pb){
+    return pa-pb;
+  }
+
+  return getCustomerSortKey(a).localeCompare(
+    getCustomerSortKey(b),
+    'zh-Hant',
+    {numeric:true}
+  );
+}
+
+function getCustomerSortPriority(c){
+  if(hasValue(c.lastStatus)){
+    return 0;
+  }
+
+  if(!hasValue(c.lastVisit)){
+    return 3;
+  }
+
+  const days=getValidDays(c.days);
+
+  if(days!==null && days>=8){
+    return 1;
+  }
+
+  return 2;
+}
+
+function getCustomerSortKey(c){
+  if(hasValue(c.customerCode)){
+    return String(c.customerCode).trim();
+  }
+
+  return String(c.customerName||'').trim();
+}
+
 function render(data){
   viewCustomers=data||[];
   document.getElementById('resultCount').innerText='搜尋結果（'+viewCustomers.length+'）';
@@ -814,6 +881,7 @@ function openDetail(i){
   });
 
   document.getElementById('reportNote').value='';
+  resetReportButton();
   renderDetail();
 
   document.getElementById('homeView').style.display='none';
@@ -920,6 +988,10 @@ function pickStatus(btn,status){
 }
 
 function submitReport(){
+  if(isSubmittingReport){
+    return;
+  }
+
   if(!currentCustomer){
     return;
   }
@@ -936,6 +1008,8 @@ function submitReport(){
     return;
   }
 
+  setReportButtonSubmitting(true);
+
   const payload={
     customerCode:currentCustomer.customerCode||'',
     customerName:currentCustomer.customerName||'',
@@ -948,6 +1022,7 @@ function submitReport(){
   if(!isWriteApiConfigured()){
     saveReportOffline(note);
     alert('離線暫存，未寫入');
+    resetReportButton();
     return;
   }
 
@@ -957,12 +1032,44 @@ function submitReport(){
     payload:JSON.stringify(payload)
   }).then(function(){
     updateCurrentCustomerAfterReport(note,'剛剛');
-    alert('回報已寫入');
     renderDetail();
     applySearch();
+    setReportButtonSaved();
+    alert('回報已寫入');
   }).catch(function(err){
     alert('回報失敗：'+err.message);
+    resetReportButton();
   });
+}
+
+function setReportButtonSubmitting(isSubmitting){
+  const btn=document.getElementById('sendReportBtn');
+
+  isSubmittingReport=isSubmitting;
+
+  if(!btn){
+    return;
+  }
+
+  btn.disabled=isSubmitting;
+  btn.innerText=isSubmitting ? '送出中...' : '送出回報';
+}
+
+function setReportButtonSaved(){
+  const btn=document.getElementById('sendReportBtn');
+
+  isSubmittingReport=false;
+
+  if(!btn){
+    return;
+  }
+
+  btn.disabled=true;
+  btn.innerText='已寫入';
+}
+
+function resetReportButton(){
+  setReportButtonSubmitting(false);
 }
 
 function isWriteApiConfigured(){
