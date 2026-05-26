@@ -360,9 +360,24 @@ button{
   color:#ffffff;
 }
 
+.report-note-area{
+  display:none;
+  margin-top:12px;
+}
+
+.report-note-area.show{
+  display:block;
+}
+
+.note-label{
+  font-size:21px;
+  font-weight:900;
+  color:#374151;
+}
+
 textarea{
   width:100%;
-  min-height:96px;
+  min-height:130px;
   margin-top:10px;
   padding:15px;
   border:none;
@@ -509,8 +524,11 @@ textarea{
           <button class="report-choice" onclick="pickStatus(this,'⚠️ 異常')">⚠️ 異常</button>
           <button class="report-choice" onclick="pickStatus(this,'☎️ 電訪 / 沒遇到')">☎️ 電訪 / 沒遇到</button>
         </div>
-        <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
-        <button class="send" id="sendReportBtn" onclick="submitReport()">送出回報</button>
+        <div class="report-note-area" id="reportNoteArea">
+          <div class="note-label">補充說明</div>
+          <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
+          <button class="send" id="sendReportBtn" onclick="submitReport()">送出回報</button>
+        </div>
       </div>
 
       <div class="section">
@@ -615,6 +633,7 @@ let isReportSubmitTap=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
+const reportNoteArea=document.getElementById('reportNoteArea');
 const reportNote=document.getElementById('reportNote');
 const sendReportBtn=document.getElementById('sendReportBtn');
 
@@ -726,8 +745,28 @@ function scheduleReportNoteScroll(includeSecondPass){
   }
 }
 
+function scheduleReportNoteAreaScroll(){
+  if(inputModeScrollTimer){
+    clearTimeout(inputModeScrollTimer);
+  }
+
+  if(inputModeSecondScrollTimer){
+    clearTimeout(inputModeSecondScrollTimer);
+  }
+
+  inputModeScrollTimer=setTimeout(scrollReportNoteAreaIntoView,100);
+  inputModeSecondScrollTimer=setTimeout(scrollReportNoteAreaIntoView,400);
+}
+
 function scrollReportNoteIntoView(){
   reportNote.scrollIntoView({
+    block:'center',
+    behavior:'smooth'
+  });
+}
+
+function scrollReportNoteAreaIntoView(){
+  reportNoteArea.scrollIntoView({
     block:'center',
     behavior:'smooth'
   });
@@ -973,6 +1012,7 @@ function openDetail(i){
   });
 
   document.getElementById('reportNote').value='';
+  hideReportNoteArea();
   resetReportButton();
   document.getElementById('detailView').classList.remove('input-mode');
   renderDetail();
@@ -1079,6 +1119,37 @@ function pickStatus(btn,status){
   });
 
   btn.classList.add('selected');
+  showReportNoteArea();
+}
+
+function showReportNoteArea(){
+  const detail=document.getElementById('detailView');
+
+  reportNoteArea.classList.add('show');
+
+  if(detail){
+    detail.classList.add('input-mode');
+  }
+
+  scheduleReportNoteAreaScroll();
+}
+
+function hideReportNoteArea(){
+  reportNoteArea.classList.remove('show');
+
+  if(inputModeScrollTimer){
+    clearTimeout(inputModeScrollTimer);
+  }
+
+  if(inputModeSecondScrollTimer){
+    clearTimeout(inputModeSecondScrollTimer);
+  }
+}
+
+function isNoteRequiredStatus(status){
+  return status==='🔥 機會' ||
+         status==='📌 追蹤' ||
+         status==='⚠️ 異常';
 }
 
 function submitReport(){
@@ -1096,6 +1167,13 @@ function submitReport(){
   }
 
   const note=document.getElementById('reportNote').value.trim();
+
+  if(isNoteRequiredStatus(selectedStatus) && !note){
+    alert('這個狀態需要補一句重點，方便下次追蹤。');
+    showReportNoteArea();
+    reportNote.focus();
+    return;
+  }
 
   if(note.length>300){
     alert('備註最多 300 字');
