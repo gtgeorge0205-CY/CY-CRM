@@ -508,6 +508,7 @@ textarea{
 
 <script>
 const API_BASE = 'https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
+const API_TOKEN = 'CYCRM_2026_write_test';
 
 const fallbackCustomers=[
   {
@@ -873,18 +874,67 @@ function submitReport(){
 
   const note=document.getElementById('reportNote').value.trim();
 
+  if(note.length>300){
+    alert('備註最多 300 字');
+    return;
+  }
+
+  const payload={
+    customerCode:currentCustomer.customerCode||'',
+    customerName:currentCustomer.customerName||'',
+    owner:currentCustomer.owner||'',
+    region:currentCustomer.region||'',
+    status:selectedStatus,
+    note:note
+  };
+
+  if(!isWriteApiConfigured()){
+    saveReportOffline(note);
+    alert('離線暫存，未寫入');
+    return;
+  }
+
+  jsonp({
+    action:'saveReport',
+    token:API_TOKEN,
+    payload:JSON.stringify(payload)
+  }).then(function(){
+    updateCurrentCustomerAfterReport(note,'剛剛');
+    alert('回報已寫入');
+    renderDetail();
+    applySearch();
+  }).catch(function(err){
+    alert('回報失敗：'+err.message);
+  });
+}
+
+function isWriteApiConfigured(){
+  return API_BASE &&
+         API_BASE !== '請貼上AppsScriptExec網址' &&
+         API_TOKEN &&
+         API_TOKEN !== '請填入和 Apps Script 一樣的 token';
+}
+
+function saveReportOffline(note){
+  updateCurrentCustomerAfterReport(note,'離線暫存');
+  renderDetail();
+  applySearch();
+}
+
+function updateCurrentCustomerAfterReport(note,timeText){
   currentCustomer.lastStatus=selectedStatus;
-  currentCustomer.lastVisit='測試時間';
+  currentCustomer.lastVisit=timeText;
   currentCustomer.lastNote=note;
+
+  if(!Array.isArray(currentCustomer.history)){
+    currentCustomer.history=[];
+  }
+
   currentCustomer.history.unshift({
-    time:'測試時間',
+    time:timeText,
     status:selectedStatus,
     note:note
   });
-
-  alert('測試回報已暫存在畫面中');
-  renderDetail();
-  render(customers);
 }
 
 function togglePhonePanel(){
