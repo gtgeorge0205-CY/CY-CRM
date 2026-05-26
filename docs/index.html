@@ -507,7 +507,9 @@ textarea{
 </div>
 
 <script>
-const customers=[
+const API_BASE =https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec;
+
+const fallbackCustomers=[
   {
     customerCode:'A001',
     customerName:'永順汽車材料行',
@@ -570,6 +572,7 @@ const customers=[
   }
 ];
 
+let customers=fallbackCustomers.slice();
 let viewCustomers=[];
 let currentCustomer=null;
 let selectedStatus='';
@@ -585,6 +588,7 @@ if(window.visualViewport){
 }
 
 render(customers);
+loadRealCustomers();
 
 searchInput.addEventListener('focus',syncViewport);
 
@@ -632,6 +636,111 @@ function clearSearch(){
   render(customers);
   searchInput.blur();
   syncViewport();
+}
+
+function loadRealCustomers(){
+  const mode=getMode();
+
+  jsonp({
+    action:'getCustomers',
+    mode:mode
+  }).then(function(data){
+    customers=(data||[]).map(normalizeCustomer);
+    applySearch();
+    syncViewport();
+  }).catch(function(err){
+    document.getElementById('resultCount').innerText=
+      'API讀取失敗，使用測試資料（'+customers.length+'）：'+err.message;
+    syncViewport();
+  });
+}
+
+function jsonp(params){
+  return new Promise(function(resolve,reject){
+    if(!API_BASE || API_BASE==='請貼上AppsScriptExec網址'){
+      reject(new Error('尚未設定 Apps Script API 網址'));
+      return;
+    }
+
+    const callbackName='jsonp_cb_'+Date.now()+'_'+Math.floor(Math.random()*100000);
+    const script=document.createElement('script');
+    let timer=null;
+
+    window[callbackName]=function(res){
+      cleanup();
+
+      if(res && res.ok){
+        resolve(res.data);
+      }else{
+        reject(new Error(res && res.error ? res.error : 'API 回傳失敗'));
+      }
+    };
+
+    function cleanup(){
+      if(timer){
+        clearTimeout(timer);
+      }
+
+      delete window[callbackName];
+
+      if(script.parentNode){
+        script.parentNode.removeChild(script);
+      }
+    }
+
+    const query=new URLSearchParams();
+
+    Object.keys(params||{}).forEach(function(key){
+      query.set(key,params[key]);
+    });
+
+    query.set('callback',callbackName);
+
+    script.src=API_BASE+'?'+query.toString();
+    script.onerror=function(){
+      cleanup();
+      reject(new Error('API 載入失敗'));
+    };
+
+    timer=setTimeout(function(){
+      cleanup();
+      reject(new Error('API 逾時'));
+    },12000);
+
+    document.body.appendChild(script);
+  });
+}
+
+function getMode(){
+  const params=new URLSearchParams(window.location.search);
+  const mode=params.get('mode')||'boss';
+
+  if(mode==='south' || mode==='north'){
+    return mode;
+  }
+
+  return 'boss';
+}
+
+function applySearch(){
+  const key=searchInput.value.trim();
+
+  clearBtn.style.display=key ? 'block' : 'none';
+
+  if(!key){
+    render(customers);
+    return;
+  }
+
+  render(customers.filter(function(c){
+    return getSearchText(c).includes(key);
+  }));
+}
+
+function normalizeCustomer(c){
+  c=c||{};
+  c.history=Array.isArray(c.history) ? c.history : [];
+  return c;
 }
 
 function render(data){
