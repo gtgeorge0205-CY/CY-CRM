@@ -256,6 +256,10 @@ button{
   padding:0 12px calc(220px + env(safe-area-inset-bottom));
 }
 
+#detailView.input-mode .detail-content{
+  padding-bottom:calc(360px + env(safe-area-inset-bottom));
+}
+
 .customer-head,
 .section{
   margin-bottom:14px;
@@ -271,6 +275,16 @@ button{
   grid-template-columns:68px minmax(0,1fr);
   gap:14px;
   align-items:center;
+}
+
+#detailView.input-mode .customer-head{
+  max-height:0;
+  margin-bottom:8px;
+  padding-top:0;
+  padding-bottom:0;
+  opacity:0;
+  pointer-events:none;
+  box-shadow:none;
 }
 
 .detail-avatar{
@@ -317,6 +331,12 @@ button{
   background:#eff6ff;
 }
 
+#detailView.input-mode .report-section{
+  border-color:#2f80ed;
+  box-shadow:0 4px 18px rgba(47,128,237,.18);
+  margin-top:0;
+}
+
 .report-grid,
 .action-grid{
   display:grid;
@@ -350,6 +370,10 @@ textarea{
   outline:none;
   resize:none;
   background:#ffffff;
+}
+
+#detailView.input-mode textarea{
+  min-height:130px;
 }
 
 .send{
@@ -584,10 +608,15 @@ let viewCustomers=[];
 let currentCustomer=null;
 let selectedStatus='';
 let isSubmittingReport=false;
+let inputModeLeaveTimer=null;
+let inputModeScrollTimer=null;
+let inputModeSecondScrollTimer=null;
+let isReportSubmitTap=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
 const reportNote=document.getElementById('reportNote');
+const sendReportBtn=document.getElementById('sendReportBtn');
 
 syncViewport();
 window.addEventListener('resize',syncViewport);
@@ -619,13 +648,14 @@ searchInput.addEventListener('keydown',function(e){
   }
 });
 
-reportNote.addEventListener('focus',function(){
-  keepReportNoteVisible();
+reportNote.addEventListener('focus',enterInputMode);
+reportNote.addEventListener('blur',leaveInputMode);
+reportNote.addEventListener('input',function(){
+  scheduleReportNoteScroll(false);
 });
 
-reportNote.addEventListener('input',function(){
-  keepReportNoteVisible();
-});
+sendReportBtn.addEventListener('touchstart',markReportSubmitTap);
+sendReportBtn.addEventListener('mousedown',markReportSubmitTap);
 
 function syncViewport(){
   let h=window.innerHeight;
@@ -647,10 +677,72 @@ function syncViewport(){
   if(detail) detail.scrollLeft=0;
 }
 
-function keepReportNoteVisible(){
-  setTimeout(function(){
-    reportNote.scrollIntoView({block:'center'});
+function enterInputMode(){
+  const detail=document.getElementById('detailView');
+
+  if(inputModeLeaveTimer){
+    clearTimeout(inputModeLeaveTimer);
+    inputModeLeaveTimer=null;
+  }
+
+  if(detail){
+    detail.classList.add('input-mode');
+  }
+
+  scheduleReportNoteScroll(true);
+}
+
+function leaveInputMode(){
+  if(inputModeLeaveTimer){
+    clearTimeout(inputModeLeaveTimer);
+  }
+
+  inputModeLeaveTimer=setTimeout(function(){
+    if(isReportSubmitTap || document.activeElement===reportNote){
+      return;
+    }
+
+    const detail=document.getElementById('detailView');
+
+    if(detail){
+      detail.classList.remove('input-mode');
+    }
   },300);
+}
+
+function scheduleReportNoteScroll(includeSecondPass){
+  if(inputModeScrollTimer){
+    clearTimeout(inputModeScrollTimer);
+  }
+
+  if(inputModeSecondScrollTimer){
+    clearTimeout(inputModeSecondScrollTimer);
+  }
+
+  inputModeScrollTimer=setTimeout(scrollReportNoteIntoView,300);
+
+  if(includeSecondPass){
+    inputModeSecondScrollTimer=setTimeout(scrollReportNoteIntoView,700);
+  }
+}
+
+function scrollReportNoteIntoView(){
+  reportNote.scrollIntoView({
+    block:'center',
+    behavior:'smooth'
+  });
+}
+
+function markReportSubmitTap(){
+  isReportSubmitTap=true;
+
+  setTimeout(function(){
+    isReportSubmitTap=false;
+
+    if(document.activeElement!==reportNote){
+      leaveInputMode();
+    }
+  },900);
 }
 
 function clearSearch(){
@@ -882,6 +974,7 @@ function openDetail(i){
 
   document.getElementById('reportNote').value='';
   resetReportButton();
+  document.getElementById('detailView').classList.remove('input-mode');
   renderDetail();
 
   document.getElementById('homeView').style.display='none';
@@ -892,6 +985,7 @@ function openDetail(i){
 
 function closeDetail(){
   document.getElementById('detailView').style.display='none';
+  document.getElementById('detailView').classList.remove('input-mode');
   document.getElementById('homeView').style.display='block';
   syncViewport();
 }
