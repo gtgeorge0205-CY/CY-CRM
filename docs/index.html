@@ -1281,23 +1281,39 @@ function togglePhonePanel(){
     return;
   }
 
-  if(!currentCustomer.phone){
+  const phones=normalizePhones(currentCustomer.phone);
+
+  if(!phones.length){
     p.innerHTML='沒有電話';
     p.style.display='block';
     return;
   }
 
-  const phones=String(currentCustomer.phone)
-    .split(/[\/、,，;；\n]+/)
-    .map(function(x){return x.trim();})
-    .filter(function(x){return x;});
-
-  p.innerHTML=phones.map(function(ph){
-    const clean=ph.replace(/[^0-9+*#]/g,'');
-    return `<a class="phone-link" href="tel:${clean}">${escapeHtml(ph)}</a>`;
+  p.innerHTML=phones.map(function(phone){
+    return `<a class="phone-link" href="tel:${phone}">${escapeHtml(phone)}</a>`;
   }).join('');
 
   p.style.display='block';
+}
+
+function normalizePhones(phoneText){
+  const seen={};
+
+  return String(phoneText||'')
+    .split(/[\/、,，;；\s　]+/)
+    .map(function(part){
+      return part.replace(/[^0-9+*#]/g,'');
+    })
+    .filter(function(phone){
+      const digitCount=phone.replace(/\D/g,'').length;
+
+      if(digitCount<5 || seen[phone]){
+        return false;
+      }
+
+      seen[phone]=true;
+      return true;
+    });
 }
 
 function toggleHistoryPanel(){
