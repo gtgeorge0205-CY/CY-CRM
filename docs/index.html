@@ -562,6 +562,7 @@ textarea{
 <script>
 const API_BASE = 'https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
 const API_TOKEN = 'CYCRM_2026_write_test';
+const MODE_STORAGE_KEY = 'crm_mode';
 
 const fallbackCustomers=[
   {
@@ -877,13 +878,54 @@ function jsonp(params){
 
 function getMode(){
   const params=new URLSearchParams(window.location.search);
-  const mode=params.get('mode')||'boss';
+  const urlMode=normalizeMode(params.get('mode'));
 
-  if(mode==='south' || mode==='north'){
-    return mode;
+  if(urlMode){
+    rememberMode(urlMode);
+    return urlMode;
   }
 
-  return 'boss';
+  const storedMode=normalizeMode(readStoredMode(MODE_STORAGE_KEY)) ||
+                   normalizeMode(readStoredMode('mode'));
+
+  if(storedMode){
+    rememberMode(storedMode);
+    return storedMode;
+  }
+
+  rememberMode('south');
+  return 'south';
+}
+
+function normalizeMode(mode){
+  const value=String(mode||'').trim().toLowerCase();
+
+  if(value==='south' || value==='north' || value==='boss'){
+    return value;
+  }
+
+  return '';
+}
+
+function rememberMode(mode){
+  const safeMode=normalizeMode(mode);
+
+  if(!safeMode){
+    return;
+  }
+
+  try{
+    localStorage.setItem(MODE_STORAGE_KEY,safeMode);
+    localStorage.setItem('mode',safeMode);
+  }catch(err){}
+}
+
+function readStoredMode(key){
+  try{
+    return localStorage.getItem(key)||'';
+  }catch(err){
+    return '';
+  }
 }
 
 function updatePageTitle(){
