@@ -1,7 +1,7 @@
 {
   "name": "新晴揚 CRM",
   "short_name": "新晴揚",
-  "start_url": "./?mode=boss",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f4f6fb",
