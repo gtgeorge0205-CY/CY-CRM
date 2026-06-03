@@ -226,6 +226,123 @@ button{
   font-size:22px;
 }
 
+#locationView{
+  display:none;
+  z-index:35;
+}
+
+.location-content{
+  padding:12px 12px calc(130px + env(safe-area-inset-bottom));
+}
+
+.location-card{
+  margin-bottom:14px;
+  padding:16px;
+  border-radius:22px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  overflow:hidden;
+}
+
+.location-title{
+  color:#374151;
+  font-size:20px;
+  font-weight:900;
+  margin-bottom:10px;
+}
+
+.location-results{
+  margin-top:10px;
+}
+
+.location-result{
+  width:100%;
+  margin-bottom:9px;
+  padding:13px;
+  border-radius:16px;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+  text-align:left;
+}
+
+.location-result-name{
+  font-size:22px;
+  font-weight:900;
+  color:#111827;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.location-result-meta,
+.location-selected-row,
+.location-position-row{
+  margin-top:5px;
+  color:#4b5563;
+  font-size:18px;
+  font-weight:800;
+  line-height:1.35;
+  word-break:break-word;
+}
+
+.location-selected-box,
+.location-position-box{
+  padding:13px;
+  border-radius:16px;
+  background:#f8fafc;
+  border:1px solid #e5e7eb;
+}
+
+.location-note{
+  width:100%;
+  min-height:130px;
+  resize:vertical;
+  border:2px solid #bfdbfe;
+  border-radius:18px;
+  padding:14px;
+  outline:none;
+  background:#ffffff;
+  font-weight:800;
+  line-height:1.35;
+}
+
+.location-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.location-btn{
+  min-height:58px;
+  border-radius:18px;
+  color:#ffffff;
+  font-size:21px;
+  font-weight:900;
+}
+
+.location-btn.gps{background:#2f80ed}
+.location-btn.save{background:#16a34a}
+.location-btn:disabled{
+  background:#9ca3af;
+  color:#f3f4f6;
+}
+
+.location-message{
+  display:none;
+  margin-top:10px;
+  padding:12px;
+  border-radius:14px;
+  font-size:18px;
+  font-weight:900;
+  line-height:1.45;
+  white-space:pre-line;
+}
+
+.location-message.show{display:block}
+.location-message.ok{background:#dcfce7;color:#15803d}
+.location-message.error{background:#ffe5e5;color:#c62828}
+.location-message.info{background:#e0f2fe;color:#075985}
+
 #detailView{
   display:none;
   z-index:40;
@@ -501,6 +618,55 @@ textarea{
     </div>
   </div>
 
+  <div class="view" id="locationView">
+    <div class="detail-top">
+      <button class="back-btn" onclick="closeLocationMode()">‹ 返回</button>
+      <div class="detail-title">新晴揚｜客戶定位模式</div>
+    </div>
+
+    <div class="location-content">
+      <div class="location-card">
+        <div class="location-title">搜尋客戶</div>
+        <div class="search-wrap">
+          <input class="search" id="locationSearch" placeholder="搜尋客戶名稱 / 電話 / 代號">
+          <button class="clear-btn" id="locationClearBtn" onclick="clearLocationSearch()">×</button>
+        </div>
+        <div class="location-results" id="locationResults">
+          <div class="empty">輸入關鍵字搜尋客戶</div>
+        </div>
+      </div>
+
+      <div class="location-card">
+        <div class="location-title">選定客戶資訊</div>
+        <div class="location-selected-box" id="locationSelectedBox">
+          <div class="location-selected-row">尚未選定客戶</div>
+        </div>
+      </div>
+
+      <div class="location-card">
+        <div class="location-title">目前位置</div>
+        <div class="location-position-box" id="locationPositionBox">
+          <div class="location-position-row">緯度：尚未取得</div>
+          <div class="location-position-row">經度：尚未取得</div>
+          <div class="location-position-row">精準度：尚未取得</div>
+        </div>
+      </div>
+
+      <div class="location-card">
+        <div class="location-title">定位備註</div>
+        <textarea class="location-note" id="locationNote" placeholder="例如：店門口 / 巷口 / Google地址偏掉 / 同排店家"></textarea>
+      </div>
+
+      <div class="location-card">
+        <div class="location-actions">
+          <button class="location-btn gps" id="getLocationBtn" onclick="getCurrentLocation()">取得目前位置</button>
+          <button class="location-btn save" id="saveLocationBtn" onclick="saveCustomerLocation()">儲存定位</button>
+        </div>
+        <div class="location-message info show" id="locationMessage">請先搜尋並選定客戶。</div>
+      </div>
+    </div>
+  </div>
+
   <div class="view" id="detailView">
     <div class="detail-top">
       <button class="back-btn" onclick="closeDetail()">‹ 返回</button>
@@ -563,6 +729,8 @@ textarea{
 const API_BASE = 'https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
 const API_TOKEN = 'CYCRM_2026_write_test';
 const MODE_STORAGE_KEY = 'crm_mode';
+const JSONP_TIMEOUT_MS = 20000;
+const GET_CUSTOMERS_RETRY_DELAY_MS = 1000;
 
 const fallbackCustomers=[
   {
@@ -636,12 +804,25 @@ let inputModeLeaveTimer=null;
 let inputModeScrollTimer=null;
 let inputModeSecondScrollTimer=null;
 let isReportSubmitTap=false;
+let locationCandidates=[];
+let selectedLocationCustomer=null;
+let currentLocationData=null;
+let isSavingLocation=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
 const reportNoteArea=document.getElementById('reportNoteArea');
 const reportNote=document.getElementById('reportNote');
 const sendReportBtn=document.getElementById('sendReportBtn');
+const locationSearchInput=document.getElementById('locationSearch');
+const locationClearBtn=document.getElementById('locationClearBtn');
+const locationResults=document.getElementById('locationResults');
+const locationSelectedBox=document.getElementById('locationSelectedBox');
+const locationPositionBox=document.getElementById('locationPositionBox');
+const locationNote=document.getElementById('locationNote');
+const getLocationBtn=document.getElementById('getLocationBtn');
+const saveLocationBtn=document.getElementById('saveLocationBtn');
+const locationMessage=document.getElementById('locationMessage');
 
 syncViewport();
 window.addEventListener('resize',syncViewport);
@@ -652,6 +833,7 @@ if(window.visualViewport){
 
 updatePageTitle();
 loadRealCustomers();
+initLocationModeFromUrl();
 
 searchInput.addEventListener('focus',syncViewport);
 
@@ -672,6 +854,20 @@ searchInput.addEventListener('keydown',function(e){
     syncViewport();
   }
 });
+
+if(locationSearchInput){
+  locationSearchInput.addEventListener('input',function(){
+    locationClearBtn.style.display=this.value.trim() ? 'block' : 'none';
+    renderLocationResults();
+  });
+
+  locationSearchInput.addEventListener('keydown',function(e){
+    if(e.key==='Enter'){
+      this.blur();
+      syncViewport();
+    }
+  });
+}
 
 reportNote.addEventListener('focus',enterInputMode);
 reportNote.addEventListener('blur',leaveInputMode);
@@ -696,10 +892,12 @@ function syncViewport(){
   const app=document.getElementById('app');
   const home=document.getElementById('homeView');
   const detail=document.getElementById('detailView');
+  const location=document.getElementById('locationView');
 
   if(app) app.scrollLeft=0;
   if(home) home.scrollLeft=0;
   if(detail) detail.scrollLeft=0;
+  if(location) location.scrollLeft=0;
 }
 
 function enterInputMode(){
@@ -798,35 +996,416 @@ function clearSearch(){
   syncViewport();
 }
 
+function initLocationModeFromUrl(){
+  const params=new URLSearchParams(window.location.search);
+  const tool=String(params.get('tool')||params.get('view')||'').trim().toLowerCase();
+
+  if(tool==='location' || tool==='location_test'){
+    openLocationMode();
+  }
+}
+
+function openLocationMode(){
+  document.getElementById('homeView').style.display='none';
+  document.getElementById('detailView').style.display='none';
+  document.getElementById('locationView').style.display='block';
+  resetLocationForm();
+  renderLocationResults();
+  syncViewport();
+}
+
+function closeLocationMode(){
+  document.getElementById('locationView').style.display='none';
+  document.getElementById('homeView').style.display='block';
+  syncViewport();
+}
+
+function resetLocationForm(){
+  locationCandidates=[];
+  selectedLocationCustomer=null;
+  currentLocationData=null;
+  isSavingLocation=false;
+
+  if(locationSearchInput){
+    locationSearchInput.value='';
+  }
+
+  if(locationClearBtn){
+    locationClearBtn.style.display='none';
+  }
+
+  if(locationNote){
+    locationNote.value='';
+  }
+
+  setLocationButtonLoading(false);
+  setLocationSaveLoading(false);
+  renderSelectedLocationCustomer();
+  renderLocationPosition();
+  setLocationMessage('請先搜尋並選定客戶。','info');
+}
+
+function clearLocationSearch(){
+  locationSearchInput.value='';
+  locationClearBtn.style.display='none';
+  renderLocationResults();
+  locationSearchInput.blur();
+  syncViewport();
+}
+
+function renderLocationResults(){
+  if(!locationResults || !locationSearchInput){
+    return;
+  }
+
+  const key=locationSearchInput.value.trim();
+
+  if(!key){
+    locationCandidates=[];
+    locationResults.innerHTML='<div class="empty">輸入關鍵字搜尋客戶</div>';
+    return;
+  }
+
+  if(!customers.length){
+    locationCandidates=[];
+    locationResults.innerHTML='<div class="empty">客戶資料尚未載入</div>';
+    return;
+  }
+
+  locationCandidates=customers.filter(function(c){
+    return getSearchText(c).includes(key);
+  }).slice(0,20);
+
+  if(!locationCandidates.length){
+    locationResults.innerHTML='<div class="empty">找不到符合的客戶</div>';
+    return;
+  }
+
+  locationResults.innerHTML=locationCandidates.map(function(c,i){
+    return `
+      <button class="location-result" onclick="selectLocationCustomer(${i})">
+        <div class="location-result-name">${escapeHtml(c.customerName||'')}</div>
+        <div class="location-result-meta">
+          ${escapeHtml(c.customerCode||'未填代號')}｜${escapeHtml(c.region||c.owner||'')}
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectLocationCustomer(index){
+  selectedLocationCustomer=locationCandidates[index]||null;
+  renderSelectedLocationCustomer();
+
+  if(selectedLocationCustomer){
+    setLocationMessage('已選定客戶，可以取得目前位置。','info');
+  }
+
+  const positionCard=document.getElementById('locationPositionBox');
+
+  if(positionCard){
+    positionCard.scrollIntoView({
+      block:'center',
+      behavior:'smooth'
+    });
+  }
+}
+
+function renderSelectedLocationCustomer(){
+  if(!locationSelectedBox){
+    return;
+  }
+
+  if(!selectedLocationCustomer){
+    locationSelectedBox.innerHTML='<div class="location-selected-row">尚未選定客戶</div>';
+    return;
+  }
+
+  locationSelectedBox.innerHTML=
+    '<div class="location-selected-row">客戶代號：'+
+    escapeHtml(selectedLocationCustomer.customerCode||'未填')+
+    '</div>'+
+    '<div class="location-selected-row">客戶名稱：'+
+    escapeHtml(selectedLocationCustomer.customerName||'')+
+    '</div>';
+}
+
+function getCurrentLocation(){
+  if(!navigator.geolocation){
+    setLocationMessage('這個瀏覽器不支援定位功能。','error');
+    return;
+  }
+
+  setLocationButtonLoading(true);
+  setLocationMessage('正在取得目前位置...','info');
+
+  navigator.geolocation.getCurrentPosition(function(position){
+    currentLocationData={
+      latitude:position.coords.latitude,
+      longitude:position.coords.longitude,
+      accuracy:position.coords.accuracy
+    };
+
+    renderLocationPosition();
+    setLocationButtonLoading(false);
+    setLocationMessage('已取得目前位置。','ok');
+  },function(err){
+    setLocationButtonLoading(false);
+    setLocationMessage(getLocationErrorMessage(err),'error');
+  },{
+    enableHighAccuracy:true,
+    timeout:15000,
+    maximumAge:0
+  });
+}
+
+function renderLocationPosition(){
+  if(!locationPositionBox){
+    return;
+  }
+
+  if(!currentLocationData){
+    locationPositionBox.innerHTML=
+      '<div class="location-position-row">緯度：尚未取得</div>'+
+      '<div class="location-position-row">經度：尚未取得</div>'+
+      '<div class="location-position-row">精準度：尚未取得</div>';
+    return;
+  }
+
+  locationPositionBox.innerHTML=
+    '<div class="location-position-row">緯度：'+
+    escapeHtml(formatCoordinate(currentLocationData.latitude))+
+    '</div>'+
+    '<div class="location-position-row">經度：'+
+    escapeHtml(formatCoordinate(currentLocationData.longitude))+
+    '</div>'+
+    '<div class="location-position-row">精準度：'+
+    escapeHtml(formatAccuracy(currentLocationData.accuracy))+
+    ' 公尺</div>';
+}
+
+function saveCustomerLocation(){
+  if(isSavingLocation){
+    return;
+  }
+
+  if(!selectedLocationCustomer){
+    setLocationMessage('請先選定客戶，才能儲存定位。','error');
+    return;
+  }
+
+  if(!currentLocationData){
+    setLocationMessage('請先取得目前位置，才能儲存定位。','error');
+    return;
+  }
+
+  if(!isWriteApiConfigured()){
+    setLocationMessage('Apps Script API 或 token 尚未設定，無法儲存定位。','error');
+    return;
+  }
+
+  const note=locationNote ? locationNote.value.trim() : '';
+
+  setLocationSaveLoading(true);
+  setLocationMessage('正在儲存定位...','info');
+
+  const payload={
+    personnel:getLocationPersonnel(),
+    mode:getMode(),
+    owner:selectedLocationCustomer.owner||'',
+    region:selectedLocationCustomer.region||'',
+    customerCode:selectedLocationCustomer.customerCode||'',
+    customerName:selectedLocationCustomer.customerName||'',
+    latitude:currentLocationData.latitude,
+    longitude:currentLocationData.longitude,
+    accuracy:currentLocationData.accuracy,
+    note:note
+  };
+
+  jsonp({
+    action:'saveCustomerLocationTest',
+    token:API_TOKEN,
+    payload:JSON.stringify(payload)
+  }).then(function(res){
+    const accuracyText=formatAccuracy(currentLocationData.accuracy);
+    const message='儲存成功：\n客戶：'+
+      (selectedLocationCustomer.customerName||'')+
+      '\n精準度：'+accuracyText+' 公尺';
+
+    setLocationSaveLoading(false);
+    setLocationMessage(message,'ok');
+    alert(message);
+  }).catch(function(err){
+    setLocationSaveLoading(false);
+    setLocationMessage('儲存定位失敗：'+err.message,'error');
+  });
+}
+
+function setLocationButtonLoading(isLoading){
+  if(!getLocationBtn){
+    return;
+  }
+
+  getLocationBtn.disabled=isLoading;
+  getLocationBtn.innerText=isLoading ? '定位中...' : '取得目前位置';
+}
+
+function setLocationSaveLoading(isLoading){
+  isSavingLocation=isLoading;
+
+  if(!saveLocationBtn){
+    return;
+  }
+
+  saveLocationBtn.disabled=isLoading;
+  saveLocationBtn.innerText=isLoading ? '儲存中...' : '儲存定位';
+}
+
+function setLocationMessage(text,type){
+  if(!locationMessage){
+    return;
+  }
+
+  locationMessage.innerText=text||'';
+  locationMessage.className='location-message show '+(type||'info');
+}
+
+function getLocationErrorMessage(err){
+  if(err && err.code===1){
+    return '無法取得定位：你拒絕了定位權限。請允許定位後再試一次。';
+  }
+
+  if(err && err.code===2){
+    return '無法取得定位：目前位置訊號不穩，請到店門口或較空曠處再試。';
+  }
+
+  if(err && err.code===3){
+    return '無法取得定位：定位逾時，請再按一次取得目前位置。';
+  }
+
+  return '無法取得定位，請確認手機定位功能已開啟。';
+}
+
+function getLocationPersonnel(){
+  const mode=getMode();
+
+  if(mode==='south'){
+    return '溪南';
+  }
+
+  if(mode==='north'){
+    return '溪北';
+  }
+
+  if(mode==='boss'){
+    return '老闆版';
+  }
+
+  return '未指定';
+}
+
+function formatCoordinate(value){
+  const n=Number(value);
+
+  if(!isFinite(n)){
+    return '';
+  }
+
+  return n.toFixed(6);
+}
+
+function formatAccuracy(value){
+  const n=Number(value);
+
+  if(!isFinite(n)){
+    return '';
+  }
+
+  return Math.round(n).toString();
+}
+
 function loadRealCustomers(){
   const mode=getMode();
+
+  loadRealCustomersAttempt(mode,1);
+}
+
+function loadRealCustomersAttempt(mode,attempt){
+  if(attempt===1){
+    console.log('getCustomers attempt 1 start');
+  }else{
+    console.log('getCustomers retry start');
+  }
 
   jsonp({
     action:'getCustomers',
     mode:mode
   }).then(function(data){
+    if(attempt>1){
+      console.log('getCustomers retry success');
+    }
+
     customers=(data||[]).map(normalizeCustomer).sort(compareCustomers);
     applySearch();
+    renderLocationResults();
+    resetLocationMessageAfterCustomersLoaded();
     syncViewport();
   }).catch(function(err){
-    customers=[];
-    viewCustomers=[];
-    document.getElementById('resultCount').innerText='資料載入失敗';
-    document.getElementById('list').innerHTML=
-      '<div class="empty" style="color:#c62828">資料載入失敗<br>'+
-      escapeHtml(err.message)+
-      '</div>';
-    syncViewport();
+    if(attempt===1){
+      console.log('getCustomers attempt 1 failed / timeout',err.message);
+      showCustomersRetryMessage();
+
+      setTimeout(function(){
+        loadRealCustomersAttempt(mode,2);
+      },GET_CUSTOMERS_RETRY_DELAY_MS);
+
+      return;
+    }
+
+    console.log('getCustomers retry failed',err.message);
+    showCustomersLoadError(err);
   });
 }
 
-function jsonp(params){
+function resetLocationMessageAfterCustomersLoaded(){
+  const locationView=document.getElementById('locationView');
+
+  if(!locationView || locationView.style.display!=='block' || selectedLocationCustomer){
+    return;
+  }
+
+  setLocationMessage('請先搜尋並選定客戶。','info');
+}
+
+function showCustomersRetryMessage(){
+  document.getElementById('resultCount').innerText='資料載入較慢，正在重試一次...';
+  document.getElementById('list').innerHTML=
+    '<div class="empty">資料載入較慢，正在重試一次...</div>';
+  setLocationMessage('資料載入較慢，正在重試一次...','info');
+  syncViewport();
+}
+
+function showCustomersLoadError(err){
+  customers=[];
+  viewCustomers=[];
+  document.getElementById('resultCount').innerText='資料載入失敗';
+  document.getElementById('list').innerHTML=
+    '<div class="empty" style="color:#c62828">資料載入失敗<br>'+
+    escapeHtml(err.message)+
+    '</div>';
+  setLocationMessage('資料載入失敗：'+err.message,'error');
+  renderLocationResults();
+  syncViewport();
+}
+
+function jsonp(params,options){
   return new Promise(function(resolve,reject){
     if(!API_BASE || API_BASE==='請貼上AppsScriptExec網址'){
       reject(new Error('尚未設定 Apps Script API 網址'));
       return;
     }
 
+    const timeoutMs=(options && options.timeoutMs) || JSONP_TIMEOUT_MS;
     const callbackName='jsonp_cb_'+Date.now()+'_'+Math.floor(Math.random()*100000);
     const script=document.createElement('script');
     let timer=null;
@@ -870,7 +1449,7 @@ function jsonp(params){
     timer=setTimeout(function(){
       cleanup();
       reject(new Error('API 逾時'));
-    },12000);
+    },timeoutMs);
 
     document.body.appendChild(script);
   });
