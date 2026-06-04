@@ -141,6 +141,84 @@ button{
   font-weight:900;
 }
 
+.visit-due-section{
+  display:none;
+  margin:10px 12px 4px;
+  padding:14px;
+  border-radius:20px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+}
+
+.visit-due-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.visit-due-title{
+  font-size:24px;
+  font-weight:900;
+}
+
+.visit-due-count{
+  color:#6b7280;
+  font-size:16px;
+  font-weight:900;
+  white-space:nowrap;
+}
+
+.visit-due-card{
+  padding:12px 0;
+  border-top:1px solid #eef0f4;
+}
+
+.visit-due-name{
+  font-size:22px;
+  line-height:1.2;
+  font-weight:900;
+}
+
+.visit-due-meta{
+  margin-top:5px;
+  color:#4b5563;
+  font-size:16px;
+  line-height:1.35;
+}
+
+.visit-due-actions{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:10px;
+}
+
+.visit-due-btn{
+  padding:10px 4px;
+  border-radius:12px;
+  color:#ffffff;
+  font-size:17px;
+  font-weight:900;
+}
+
+.visit-due-btn.report{background:#2f80ed}
+.visit-due-btn.history{background:#27ae60}
+.visit-due-btn.phone{background:#f2994a}
+.visit-due-btn.nav{background:#7b61ff}
+
+.visit-due-toggle{
+  width:100%;
+  margin-top:8px;
+  padding:11px;
+  border-radius:14px;
+  background:#eef2ff;
+  color:#1e40af;
+  font-size:18px;
+  font-weight:900;
+}
+
 .list{
   padding:8px 12px calc(120px + env(safe-area-inset-bottom));
 }
@@ -612,6 +690,15 @@ textarea{
       </div>
     </div>
 
+    <section class="visit-due-section" id="visitDueSection">
+      <div class="visit-due-head">
+        <div class="visit-due-title">待拜訪客戶</div>
+        <div class="visit-due-count" id="visitDueCount"></div>
+      </div>
+      <div id="visitDueList"></div>
+      <button class="visit-due-toggle" id="visitDueToggle" onclick="toggleVisitDueExpand()">展開全部</button>
+    </section>
+
     <div class="result-count" id="resultCount">真實資料載入中...</div>
     <div class="list" id="list">
       <div class="empty">真實資料載入中...</div>
@@ -797,6 +884,8 @@ const fallbackCustomers=[
 
 let customers=[];
 let homeCustomers=[];
+let visitDueCustomers=[];
+let visitDueExpanded=false;
 let viewCustomers=[];
 let currentCustomer=null;
 let selectedStatus='';
@@ -1348,8 +1437,11 @@ function loadRealCustomersAttempt(mode,attempt){
 
     customers=(data||[]).map(normalizeCustomer).sort(compareCustomers);
     homeCustomers=filterHomeCustomers(customers,mode);
-    logHomeHideFilterStats(customers,homeCustomers,mode);
+    visitDueExpanded=false;
+    visitDueCustomers=buildVisitDueCustomers(homeCustomers,mode);
+    logHomeHideFilterStats(customers,homeCustomers,mode,visitDueCustomers);
     applySearch();
+    renderVisitDueList(mode);
     renderLocationResults();
     resetLocationMessageAfterCustomersLoaded();
     syncViewport();
@@ -1391,7 +1483,9 @@ function showCustomersRetryMessage(){
 function showCustomersLoadError(err){
   customers=[];
   homeCustomers=[];
+  visitDueCustomers=[];
   viewCustomers=[];
+  renderVisitDueList(getMode());
   document.getElementById('resultCount').innerText='資料載入失敗';
   document.getElementById('list').innerHTML=
     '<div class="empty" style="color:#c62828">資料載入失敗<br>'+
@@ -1551,6 +1645,7 @@ function normalizeCustomer(c){
   c=c||{};
   c.history=Array.isArray(c.history) ? c.history : [];
   c.hideHome=String(c.hideHome||'').trim();
+  c.customerStatus=String(c.customerStatus||'').trim();
   return c;
 }
 
@@ -1570,10 +1665,179 @@ function isHomeHiddenCustomer(c){
   return String((c && c.hideHome) || '').trim()==='是';
 }
 
-function logHomeHideFilterStats(rawList,visibleList,mode){
+function buildVisitDueCustomers(data,mode){
+  const list=Array.isArray(data) ? data : [];
+
+  if(mode!=='north' && mode!=='south'){
+    return [];
+  }
+
+  return list.filter(isVisitDueCustomer).sort(compareVisitDueCustomers);
+}
+
+function isVisitDueCustomer(c){
+  if(!c || isHomeHiddenCustomer(c)){
+    return false;
+  }
+
+  const status=String(c.customerStatus||'').trim();
+  const days=getValidDays(c.days);
+  const threshold=getVisitDueThreshold(status);
+
+  if(status==='停止經營' || days===null || threshold===null){
+    return false;
+  }
+
+  return days>=threshold;
+}
+
+function getVisitDueThreshold(status){
+  const rules={
+    '重點經營':14,
+    '觀察中':14,
+    '待開發':21,
+    '穩定維護':30,
+    '暫緩經營':60
+  };
+
+  return Object.prototype.hasOwnProperty.call(rules,status) ? rules[status] : null;
+}
+
+function compareVisitDueCustomers(a,b){
+  const pa=getVisitDuePriority(a.customerStatus);
+  const pb=getVisitDuePriority(b.customerStatus);
+
+  if(pa!==pb){
+    return pa-pb;
+  }
+
+  const da=getValidDays(a.days) || 0;
+  const db=getValidDays(b.days) || 0;
+
+  if(da!==db){
+    return db-da;
+  }
+
+  return getCustomerSortKey(a).localeCompare(
+    getCustomerSortKey(b),
+    'zh-Hant',
+    {numeric:true}
+  );
+}
+
+function getVisitDuePriority(status){
+  if(status==='重點經營' || status==='觀察中'){
+    return 0;
+  }
+
+  if(status==='待開發'){
+    return 1;
+  }
+
+  if(status==='穩定維護'){
+    return 2;
+  }
+
+  if(status==='暫緩經營'){
+    return 3;
+  }
+
+  return 9;
+}
+
+function getVisibleVisitDueCustomers(){
+  return visitDueExpanded ? visitDueCustomers : visitDueCustomers.slice(0,20);
+}
+
+function renderVisitDueList(mode){
+  const section=document.getElementById('visitDueSection');
+  const count=document.getElementById('visitDueCount');
+  const list=document.getElementById('visitDueList');
+  const toggle=document.getElementById('visitDueToggle');
+
+  if(!section || !count || !list || !toggle){
+    return;
+  }
+
+  if(mode!=='north' && mode!=='south'){
+    section.style.display='none';
+    return;
+  }
+
+  section.style.display='block';
+  const visible=getVisibleVisitDueCustomers();
+  count.innerText=visitDueCustomers.length+' 位';
+
+  if(!visitDueCustomers.length){
+    list.innerHTML='<div class="empty" style="padding:24px 8px">目前沒有待拜訪客戶</div>';
+    toggle.style.display='none';
+    return;
+  }
+
+  list.innerHTML=visible.map(function(c,i){
+    return `
+      <div class="visit-due-card">
+        <div class="visit-due-name">${escapeHtml(c.customerName||'')}</div>
+        <div class="visit-due-meta">
+          ${escapeHtml(c.customerStatus||'未填狀態')}｜${escapeHtml(formatDueDays(c.days))}｜最後拜訪：${escapeHtml(c.lastVisit||'無日期')}<br>
+          最後狀況：${escapeHtml(c.lastStatus||'尚無狀況')}
+        </div>
+        <div class="visit-due-actions">
+          <button class="visit-due-btn report" onclick="openVisitDueAction(${i},'report')">回報</button>
+          <button class="visit-due-btn history" onclick="openVisitDueAction(${i},'history')">歷史</button>
+          <button class="visit-due-btn phone" onclick="openVisitDueAction(${i},'phone')">電話</button>
+          <button class="visit-due-btn nav" onclick="openVisitDueAction(${i},'nav')">導航</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  toggle.style.display=visitDueCustomers.length>20 ? 'block' : 'none';
+  toggle.innerText=visitDueExpanded ? '收合' : '展開全部';
+}
+
+function toggleVisitDueExpand(){
+  visitDueExpanded=!visitDueExpanded;
+  renderVisitDueList(getMode());
+  syncViewport();
+}
+
+function openVisitDueAction(index,action){
+  const customer=getVisibleVisitDueCustomers()[index];
+
+  if(!customer){
+    return;
+  }
+
+  if(action==='nav'){
+    currentCustomer=customer;
+    openMap();
+    return;
+  }
+
+  openCustomerDetail(customer);
+
+  if(action==='history'){
+    setTimeout(toggleHistoryPanel,80);
+  }
+
+  if(action==='phone'){
+    setTimeout(togglePhonePanel,80);
+  }
+}
+
+function formatDueDays(days){
+  const valid=getValidDays(days);
+
+  return valid===null ? '未填天數' : valid+'天未拜訪';
+}
+
+function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
   const originalCount=Array.isArray(rawList) ? rawList.length : 0;
   const finalCount=Array.isArray(visibleList) ? visibleList.length : 0;
   const hiddenCount=originalCount-finalCount;
+  const dueCandidates=Array.isArray(dueList) ? dueList : [];
+  const dueVisible=visitDueExpanded ? dueCandidates : dueCandidates.slice(0,20);
   const hiddenCustomers=(Array.isArray(rawList) ? rawList : []).filter(function(c){
     return (mode==='north' || mode==='south') && isHomeHiddenCustomer(c);
   }).slice(0,10).map(function(c){
@@ -1586,7 +1850,19 @@ function logHomeHideFilterStats(rawList,visibleList,mode){
 
   console.log('原始客戶數',originalCount);
   console.log('隱藏客戶數',hiddenCount);
+  console.log('待拜訪候選數',dueCandidates.length);
+  console.log('待拜訪顯示數',dueVisible.length);
   console.log('最終顯示客戶數',finalCount);
+  console.log('前 10 筆待拜訪客戶',dueCandidates.slice(0,10).map(function(c){
+    return {
+      customerCode:c.customerCode||'',
+      customerName:c.customerName||'',
+      customerStatus:c.customerStatus||'',
+      days:c.days,
+      lastVisit:c.lastVisit||'',
+      lastStatus:c.lastStatus||''
+    };
+  }));
   console.log('被隱藏客戶前 10 筆 customerCode/customerName/hideHome',hiddenCustomers);
 }
 
@@ -1663,11 +1939,15 @@ function render(data){
 }
 
 function openDetail(i){
+  openCustomerDetail(viewCustomers[i]);
+}
+
+function openCustomerDetail(customer){
   if(document.activeElement){
     document.activeElement.blur();
   }
 
-  currentCustomer=viewCustomers[i];
+  currentCustomer=customer;
   selectedStatus='';
 
   if(!currentCustomer){
