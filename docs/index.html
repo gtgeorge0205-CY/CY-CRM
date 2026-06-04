@@ -1574,11 +1574,20 @@ function logHomeHideFilterStats(rawList,visibleList,mode){
   const originalCount=Array.isArray(rawList) ? rawList.length : 0;
   const finalCount=Array.isArray(visibleList) ? visibleList.length : 0;
   const hiddenCount=originalCount-finalCount;
+  const hiddenCustomers=(Array.isArray(rawList) ? rawList : []).filter(function(c){
+    return (mode==='north' || mode==='south') && isHomeHiddenCustomer(c);
+  }).slice(0,10).map(function(c){
+    return {
+      customerCode:c.customerCode||'',
+      customerName:c.customerName||'',
+      hideHome:c.hideHome||''
+    };
+  });
 
   console.log('原始客戶數',originalCount);
   console.log('隱藏客戶數',hiddenCount);
   console.log('最終顯示客戶數',finalCount);
-  console.log('home hide filter mode',mode);
+  console.log('被隱藏客戶前 10 筆 customerCode/customerName/hideHome',hiddenCustomers);
 }
 
 function compareCustomers(a,b){
