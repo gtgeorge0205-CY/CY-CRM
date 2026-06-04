@@ -796,6 +796,7 @@ const fallbackCustomers=[
 ];
 
 let customers=[];
+let homeCustomers=[];
 let viewCustomers=[];
 let currentCustomer=null;
 let selectedStatus='';
@@ -841,7 +842,7 @@ searchInput.addEventListener('input',function(){
   const key=this.value.trim();
   clearBtn.style.display=key ? 'block' : 'none';
 
-  render(customers.filter(function(c){
+  render(homeCustomers.filter(function(c){
     return getSearchText(c).includes(key);
   }));
 
@@ -991,7 +992,7 @@ function markReportSubmitTap(){
 function clearSearch(){
   searchInput.value='';
   clearBtn.style.display='none';
-  render(customers);
+  render(homeCustomers);
   searchInput.blur();
   syncViewport();
 }
@@ -1346,6 +1347,8 @@ function loadRealCustomersAttempt(mode,attempt){
     }
 
     customers=(data||[]).map(normalizeCustomer).sort(compareCustomers);
+    homeCustomers=filterHomeCustomers(customers,mode);
+    logHomeHideFilterStats(customers,homeCustomers,mode);
     applySearch();
     renderLocationResults();
     resetLocationMessageAfterCustomersLoaded();
@@ -1387,6 +1390,7 @@ function showCustomersRetryMessage(){
 
 function showCustomersLoadError(err){
   customers=[];
+  homeCustomers=[];
   viewCustomers=[];
   document.getElementById('resultCount').innerText='資料載入失敗';
   document.getElementById('list').innerHTML=
@@ -1534,11 +1538,11 @@ function applySearch(){
   clearBtn.style.display=key ? 'block' : 'none';
 
   if(!key){
-    render(customers);
+    render(homeCustomers);
     return;
   }
 
-  render(customers.filter(function(c){
+  render(homeCustomers.filter(function(c){
     return getSearchText(c).includes(key);
   }));
 }
@@ -1546,7 +1550,35 @@ function applySearch(){
 function normalizeCustomer(c){
   c=c||{};
   c.history=Array.isArray(c.history) ? c.history : [];
+  c.hideHome=String(c.hideHome||'').trim();
   return c;
+}
+
+function filterHomeCustomers(data,mode){
+  const list=Array.isArray(data) ? data : [];
+
+  if(mode!=='north' && mode!=='south'){
+    return list.slice();
+  }
+
+  return list.filter(function(c){
+    return !isHomeHiddenCustomer(c);
+  });
+}
+
+function isHomeHiddenCustomer(c){
+  return String((c && c.hideHome) || '').trim()==='是';
+}
+
+function logHomeHideFilterStats(rawList,visibleList,mode){
+  const originalCount=Array.isArray(rawList) ? rawList.length : 0;
+  const finalCount=Array.isArray(visibleList) ? visibleList.length : 0;
+  const hiddenCount=originalCount-finalCount;
+
+  console.log('原始客戶數',originalCount);
+  console.log('隱藏客戶數',hiddenCount);
+  console.log('最終顯示客戶數',finalCount);
+  console.log('home hide filter mode',mode);
 }
 
 function compareCustomers(a,b){
