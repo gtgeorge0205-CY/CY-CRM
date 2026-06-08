@@ -173,6 +173,7 @@ button{
 .visit-due-card{
   padding:12px 0;
   border-top:1px solid #eef0f4;
+  cursor:pointer;
 }
 
 .visit-due-name{
@@ -187,26 +188,6 @@ button{
   font-size:16px;
   line-height:1.35;
 }
-
-.visit-due-actions{
-  display:grid;
-  grid-template-columns:repeat(4,1fr);
-  gap:7px;
-  margin-top:10px;
-}
-
-.visit-due-btn{
-  padding:10px 4px;
-  border-radius:12px;
-  color:#ffffff;
-  font-size:17px;
-  font-weight:900;
-}
-
-.visit-due-btn.report{background:#2f80ed}
-.visit-due-btn.history{background:#27ae60}
-.visit-due-btn.phone{background:#f2994a}
-.visit-due-btn.nav{background:#7b61ff}
 
 .visit-due-toggle{
   width:100%;
@@ -1645,8 +1626,25 @@ function normalizeCustomer(c){
   c=c||{};
   c.history=Array.isArray(c.history) ? c.history : [];
   c.hideHome=String(c.hideHome||'').trim();
+  c.visitPolicy=normalizeVisitPolicy(c.visitPolicy||c.homeVisitPolicy,c.hideHome);
+  c.hideHome=c.visitPolicy==='隱藏首頁' ? '是' : '';
   c.customerStatus=String(c.customerStatus||'').trim();
   return c;
+}
+
+function normalizeVisitPolicy(policy,hideHome){
+  const value=String(policy||'').trim();
+  const hidden=String(hideHome||'').trim();
+
+  if(value==='是' || value==='隱藏首頁' || hidden==='是'){
+    return '隱藏首頁';
+  }
+
+  if(value==='被動維護'){
+    return '被動維護';
+  }
+
+  return '';
 }
 
 function filterHomeCustomers(data,mode){
@@ -1662,7 +1660,10 @@ function filterHomeCustomers(data,mode){
 }
 
 function isHomeHiddenCustomer(c){
-  return String((c && c.hideHome) || '').trim()==='是';
+  const hideHome=String((c && c.hideHome) || '').trim();
+  const policy=String((c && c.visitPolicy) || '').trim();
+
+  return hideHome==='是' || policy==='隱藏首頁';
 }
 
 function buildVisitDueCustomers(data,mode){
@@ -1677,6 +1678,10 @@ function buildVisitDueCustomers(data,mode){
 
 function isVisitDueCustomer(c){
   if(!c || isHomeHiddenCustomer(c)){
+    return false;
+  }
+
+  if(String(c.visitPolicy||'').trim()==='被動維護'){
     return false;
   }
 
@@ -1776,17 +1781,11 @@ function renderVisitDueList(mode){
 
   list.innerHTML=visible.map(function(c,i){
     return `
-      <div class="visit-due-card">
+      <div class="visit-due-card" onclick="openVisitDueDetail(${i})">
         <div class="visit-due-name">${escapeHtml(c.customerName||'')}</div>
         <div class="visit-due-meta">
           ${escapeHtml(c.customerStatus||'未填狀態')}｜${escapeHtml(formatDueDays(c.days))}｜最後拜訪：${escapeHtml(c.lastVisit||'無日期')}<br>
           最後狀況：${escapeHtml(c.lastStatus||'尚無狀況')}
-        </div>
-        <div class="visit-due-actions">
-          <button class="visit-due-btn report" onclick="openVisitDueAction(${i},'report')">回報</button>
-          <button class="visit-due-btn history" onclick="openVisitDueAction(${i},'history')">歷史</button>
-          <button class="visit-due-btn phone" onclick="openVisitDueAction(${i},'phone')">電話</button>
-          <button class="visit-due-btn nav" onclick="openVisitDueAction(${i},'nav')">導航</button>
         </div>
       </div>
     `;
@@ -1802,28 +1801,14 @@ function toggleVisitDueExpand(){
   syncViewport();
 }
 
-function openVisitDueAction(index,action){
+function openVisitDueDetail(index){
   const customer=getVisibleVisitDueCustomers()[index];
 
   if(!customer){
     return;
   }
 
-  if(action==='nav'){
-    currentCustomer=customer;
-    openMap();
-    return;
-  }
-
   openCustomerDetail(customer);
-
-  if(action==='history'){
-    setTimeout(toggleHistoryPanel,80);
-  }
-
-  if(action==='phone'){
-    setTimeout(togglePhonePanel,80);
-  }
 }
 
 function formatDueDays(days){
@@ -1838,18 +1823,23 @@ function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
   const hiddenCount=originalCount-finalCount;
   const dueCandidates=Array.isArray(dueList) ? dueList : [];
   const dueVisible=visitDueExpanded ? dueCandidates : dueCandidates.slice(0,20);
+  const passiveCustomers=(Array.isArray(rawList) ? rawList : []).filter(function(c){
+    return String(c.visitPolicy||'').trim()==='被動維護';
+  });
   const hiddenCustomers=(Array.isArray(rawList) ? rawList : []).filter(function(c){
     return (mode==='north' || mode==='south') && isHomeHiddenCustomer(c);
   }).slice(0,10).map(function(c){
     return {
       customerCode:c.customerCode||'',
       customerName:c.customerName||'',
-      hideHome:c.hideHome||''
+      hideHome:c.hideHome||'',
+      visitPolicy:c.visitPolicy||''
     };
   });
 
   console.log('原始客戶數',originalCount);
   console.log('隱藏客戶數',hiddenCount);
+  console.log('被動維護客戶數',passiveCustomers.length);
   console.log('待拜訪候選數',dueCandidates.length);
   console.log('待拜訪顯示數',dueVisible.length);
   console.log('最終顯示客戶數',finalCount);
@@ -1863,7 +1853,14 @@ function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
       lastStatus:c.lastStatus||''
     };
   }));
-  console.log('被隱藏客戶前 10 筆 customerCode/customerName/hideHome',hiddenCustomers);
+  console.log('被隱藏客戶前 10 筆 customerCode/customerName/hideHome/visitPolicy',hiddenCustomers);
+  console.log('被動維護客戶前 10 筆',passiveCustomers.slice(0,10).map(function(c){
+    return {
+      customerCode:c.customerCode||'',
+      customerName:c.customerName||'',
+      visitPolicy:c.visitPolicy||''
+    };
+  }));
 }
 
 function compareCustomers(a,b){
