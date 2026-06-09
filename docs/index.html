@@ -189,6 +189,13 @@ button{
   line-height:1.35;
 }
 
+.visit-due-group-title{
+  padding:12px 0 4px;
+  color:#111827;
+  font-size:17px;
+  font-weight:900;
+}
+
 .visit-due-toggle{
   width:100%;
   margin-top:8px;
@@ -673,7 +680,7 @@ textarea{
 
     <section class="visit-due-section" id="visitDueSection">
       <div class="visit-due-head">
-        <div class="visit-due-title">待拜訪客戶</div>
+        <div class="visit-due-title">本日提醒</div>
         <div class="visit-due-count" id="visitDueCount"></div>
       </div>
       <div id="visitDueList"></div>
@@ -799,6 +806,8 @@ const API_TOKEN = 'CYCRM_2026_write_test';
 const MODE_STORAGE_KEY = 'crm_mode';
 const JSONP_TIMEOUT_MS = 20000;
 const GET_CUSTOMERS_RETRY_DELAY_MS = 1000;
+const DAILY_REMINDER_OVERDUE_LIMIT = 4;
+const DAILY_REMINDER_FIRST_CONTACT_LIMIT = 1;
 
 const fallbackCustomers=[
   {
@@ -866,6 +875,9 @@ const fallbackCustomers=[
 let customers=[];
 let homeCustomers=[];
 let visitDueCustomers=[];
+let visitDueOverdueCandidates=[];
+let visitDueNeverVisitedCandidates=[];
+let visitDueRenderedCustomers=[];
 let visitDueExpanded=false;
 let viewCustomers=[];
 let currentCustomer=null;
@@ -1419,8 +1431,11 @@ function loadRealCustomersAttempt(mode,attempt){
     customers=(data||[]).map(normalizeCustomer).sort(compareCustomers);
     homeCustomers=filterHomeCustomers(customers,mode);
     visitDueExpanded=false;
-    visitDueCustomers=buildVisitDueCustomers(homeCustomers,mode);
-    logHomeHideFilterStats(customers,homeCustomers,mode,visitDueCustomers);
+    const dailyReminder=buildVisitDueCustomers(homeCustomers,mode);
+    visitDueOverdueCandidates=dailyReminder.overdueCandidates;
+    visitDueNeverVisitedCandidates=dailyReminder.neverVisitedCandidates;
+    visitDueCustomers=dailyReminder.allCandidates;
+    logHomeHideFilterStats(customers,homeCustomers,mode,dailyReminder);
     applySearch();
     renderVisitDueList(mode);
     renderLocationResults();
@@ -1465,6 +1480,9 @@ function showCustomersLoadError(err){
   customers=[];
   homeCustomers=[];
   visitDueCustomers=[];
+  visitDueOverdueCandidates=[];
+  visitDueNeverVisitedCandidates=[];
+  visitDueRenderedCustomers=[];
   viewCustomers=[];
   renderVisitDueList(getMode());
   document.getElementById('resultCount').innerText='資料載入失敗';
@@ -1668,12 +1686,39 @@ function isHomeHiddenCustomer(c){
 
 function buildVisitDueCustomers(data,mode){
   const list=Array.isArray(data) ? data : [];
+  const overdueCandidates=[];
+  const neverVisitedCandidates=[];
 
   if(mode!=='north' && mode!=='south'){
-    return [];
+    return {
+      overdueCandidates:[],
+      neverVisitedCandidates:[],
+      allCandidates:[]
+    };
   }
 
-  return list.map(buildVisitDueCandidate).filter(Boolean).sort(compareVisitDueCustomers);
+  list.forEach(function(c){
+    const candidate=buildVisitDueCandidate(c);
+
+    if(!candidate){
+      return;
+    }
+
+    if(candidate.reminderType==='firstContact'){
+      neverVisitedCandidates.push(candidate);
+    }else{
+      overdueCandidates.push(candidate);
+    }
+  });
+
+  overdueCandidates.sort(compareOverdueCandidates);
+  neverVisitedCandidates.sort(compareNeverVisitedCandidates);
+
+  return {
+    overdueCandidates:overdueCandidates,
+    neverVisitedCandidates:neverVisitedCandidates,
+    allCandidates:overdueCandidates.concat(neverVisitedCandidates)
+  };
 }
 
 function buildVisitDueCandidate(c){
@@ -1694,14 +1739,27 @@ function buildVisitDueCandidate(c){
     return null;
   }
 
-  if(!neverVisited && days<threshold){
-    return null;
-  }
+  let priority=null;
+  let reminderType='overdue';
 
-  const priority=calculateVisitPriority(c,status,days,threshold,neverVisited);
+  if(neverVisited){
+    if(!isFirstContactStatus(status)){
+      return null;
+    }
+
+    priority=calculateFirstContactPriority(status);
+    reminderType='firstContact';
+  }else{
+    if(days<threshold){
+      return null;
+    }
+
+    priority=calculateOverdueVisitPriority(c,status,days,threshold);
+  }
 
   c.daysSinceVisit=days;
   c.isNeverVisited=neverVisited;
+  c.reminderType=reminderType;
   c.priorityScore=priority.score;
   c.priorityReason=priority.reason;
   c.visitDueCycle=threshold;
@@ -1711,6 +1769,10 @@ function buildVisitDueCandidate(c){
 
 function isNeverVisited(c,days){
   return !hasValue(c.lastVisit) || !hasValue(c.days) || days===null;
+}
+
+function isFirstContactStatus(status){
+  return status==='重點經營' || status==='觀察中' || status==='待開發';
 }
 
 function getVisitDueThreshold(status){
@@ -1725,16 +1787,24 @@ function getVisitDueThreshold(status){
   return Object.prototype.hasOwnProperty.call(rules,status) ? rules[status] : null;
 }
 
-function calculateVisitPriority(c,status,days,threshold,neverVisited){
+function calculateOverdueVisitPriority(c,status,days,threshold){
   const baseScore=getVisitStatusBaseScore(status);
   const statusWeight=getLastStatusWeight(c.lastStatus);
-  const timingScore=neverVisited
-    ? getNeverVisitBonus(status)
-    : Math.max(0,Math.min(days-threshold,60));
+  const timingScore=Math.max(0,Math.min(days-threshold,60));
 
   return {
     score:baseScore+timingScore+statusWeight.score,
-    reason:buildVisitPriorityReason(status,days,threshold,neverVisited,statusWeight.reason)
+    reason:buildOverdueVisitPriorityReason(status,days,threshold,statusWeight.reason)
+  };
+}
+
+function calculateFirstContactPriority(status){
+  const baseScore=getVisitStatusBaseScore(status);
+  const timingScore=getFirstContactBonus(status);
+
+  return {
+    score:baseScore+timingScore,
+    reason:'從未拜訪，列入首次接觸候選'
   };
 }
 
@@ -1750,12 +1820,11 @@ function getVisitStatusBaseScore(status){
   return Object.prototype.hasOwnProperty.call(scores,status) ? scores[status] : 0;
 }
 
-function getNeverVisitBonus(status){
+function getFirstContactBonus(status){
   const scores={
-    '重點經營':40,
-    '觀察中':35,
-    '待開發':30,
-    '穩定維護':15,
+    '重點經營':12,
+    '觀察中':10,
+    '待開發':8,
     '暫緩經營':0
   };
 
@@ -1796,18 +1865,14 @@ function getLastStatusWeight(lastStatus){
   return {score:0,reason:''};
 }
 
-function buildVisitPriorityReason(status,days,threshold,neverVisited,statusReason){
+function buildOverdueVisitPriorityReason(status,days,threshold,statusReason){
   const parts=[];
 
   if(status){
     parts.push(status);
   }
 
-  if(neverVisited){
-    parts.push('從未拜訪，需建立首次接觸');
-  }else{
-    parts.push('逾期'+Math.max(0,days-threshold)+'天');
-  }
+  parts.push('逾期'+Math.max(0,days-threshold)+'天');
 
   if(statusReason){
     parts.push(statusReason);
@@ -1816,16 +1881,12 @@ function buildVisitPriorityReason(status,days,threshold,neverVisited,statusReaso
   return parts.join('，');
 }
 
-function compareVisitDueCustomers(a,b){
+function compareOverdueCandidates(a,b){
   const scoreA=Number(a.priorityScore || 0);
   const scoreB=Number(b.priorityScore || 0);
 
   if(scoreA!==scoreB){
     return scoreB-scoreA;
-  }
-
-  if(Boolean(a.isNeverVisited)!==Boolean(b.isNeverVisited)){
-    return a.isNeverVisited ? -1 : 1;
   }
 
   const da=a.daysSinceVisit===null ? -1 : Number(a.daysSinceVisit || 0);
@@ -1847,6 +1908,42 @@ function compareVisitDueCustomers(a,b){
     'zh-Hant',
     {numeric:true}
   );
+}
+
+function compareNeverVisitedCandidates(a,b){
+  const scoreA=Number(a.priorityScore || 0);
+  const scoreB=Number(b.priorityScore || 0);
+
+  if(scoreA!==scoreB){
+    return scoreB-scoreA;
+  }
+
+  const pa=getVisitDuePriority(a.customerStatus);
+  const pb=getVisitDuePriority(b.customerStatus);
+
+  if(pa!==pb){
+    return pa-pb;
+  }
+
+  return getCustomerSortKey(a).localeCompare(
+    getCustomerSortKey(b),
+    'zh-Hant',
+    {numeric:true}
+  );
+}
+
+function compareVisitDueCustomers(a,b){
+  if(a.reminderType==='firstContact' && b.reminderType!=='firstContact'){
+    return 1;
+  }
+
+  if(a.reminderType!=='firstContact' && b.reminderType==='firstContact'){
+    return -1;
+  }
+
+  return a.reminderType==='firstContact'
+    ? compareNeverVisitedCandidates(a,b)
+    : compareOverdueCandidates(a,b);
 }
 
 function getVisitDuePriority(status){
@@ -1874,7 +1971,23 @@ function getVisitDuePriority(status){
 }
 
 function getVisibleVisitDueCustomers(){
-  return visitDueExpanded ? visitDueCustomers : visitDueCustomers.slice(0,20);
+  const groups=getVisibleVisitDueGroups();
+
+  return groups.overdueCandidates.concat(groups.neverVisitedCandidates);
+}
+
+function getVisibleVisitDueGroups(){
+  if(visitDueExpanded){
+    return {
+      overdueCandidates:visitDueOverdueCandidates,
+      neverVisitedCandidates:visitDueNeverVisitedCandidates
+    };
+  }
+
+  return {
+    overdueCandidates:visitDueOverdueCandidates.slice(0,DAILY_REMINDER_OVERDUE_LIMIT),
+    neverVisitedCandidates:visitDueNeverVisitedCandidates.slice(0,DAILY_REMINDER_FIRST_CONTACT_LIMIT)
+  };
 }
 
 function renderVisitDueList(mode){
@@ -1893,31 +2006,62 @@ function renderVisitDueList(mode){
   }
 
   section.style.display='block';
-  const visible=getVisibleVisitDueCustomers();
-  count.innerText=visitDueCustomers.length+' 位';
+  const groups=getVisibleVisitDueGroups();
+  const visible=groups.overdueCandidates.concat(groups.neverVisitedCandidates);
+  count.innerText='一般拜訪建議 '+groups.overdueCandidates.length+' 家｜首次接觸候選 '+groups.neverVisitedCandidates.length+' 家';
 
   if(!visitDueCustomers.length){
-    list.innerHTML='<div class="empty" style="padding:24px 8px">目前沒有待拜訪客戶</div>';
+    visitDueRenderedCustomers=[];
+    list.innerHTML='<div class="empty" style="padding:24px 8px">目前沒有急需拜訪的客戶</div>';
     toggle.style.display='none';
     return;
   }
 
-  list.innerHTML=visible.map(function(c,i){
-    return `
-      <div class="visit-due-card" onclick="openVisitDueDetail(${i})">
-        <div class="visit-due-name">${escapeHtml(c.customerName||'')}</div>
-        <div class="visit-due-meta">
-          ${escapeHtml(c.customerStatus||'未填狀態')}｜${escapeHtml(formatVisitDueTiming(c))}｜優先分數 ${escapeHtml(c.priorityScore||0)}<br>
-          最後拜訪日：${escapeHtml(c.lastVisit||'無日期')}<br>
-          最後狀況：${escapeHtml(c.lastStatus||'尚無狀況')}<br>
-          排序原因：${escapeHtml(c.priorityReason||'依狀態與拜訪週期排序')}
-        </div>
-      </div>
-    `;
-  }).join('');
+  visitDueRenderedCustomers=[];
 
-  toggle.style.display=visitDueCustomers.length>20 ? 'block' : 'none';
-  toggle.innerText=visitDueExpanded ? '收合' : '展開全部';
+  if(visitDueExpanded){
+    list.innerHTML=
+      renderVisitDueGroup('一般拜訪候選',groups.overdueCandidates)+
+      renderVisitDueGroup('首次接觸候選',groups.neverVisitedCandidates);
+  }else{
+    list.innerHTML=visible.map(renderVisitDueCard).join('');
+  }
+
+  const hasMore=visitDueOverdueCandidates.length>DAILY_REMINDER_OVERDUE_LIMIT ||
+                visitDueNeverVisitedCandidates.length>DAILY_REMINDER_FIRST_CONTACT_LIMIT;
+  toggle.style.display=hasMore ? 'block' : 'none';
+  toggle.innerText=visitDueExpanded ? '收合' : '查看全部候選';
+}
+
+function renderVisitDueGroup(title,candidates){
+  const rows=[
+    '<div class="visit-due-group-title">'+escapeHtml(title)+'（'+candidates.length+'）</div>'
+  ];
+
+  if(!candidates.length){
+    rows.push('<div class="empty" style="padding:12px 0">目前沒有候選</div>');
+    return rows.join('');
+  }
+
+  return rows.concat(candidates.map(renderVisitDueCard)).join('');
+}
+
+function renderVisitDueCard(c){
+  const index=visitDueRenderedCustomers.push(c)-1;
+  const lastVisitText=c.reminderType==='firstContact' ? '無紀錄' : (c.lastVisit||'無日期');
+  const lastStatusText=c.reminderType==='firstContact' ? '無拜訪紀錄' : (c.lastStatus||'尚無狀況');
+
+  return `
+    <div class="visit-due-card" onclick="openVisitDueDetail(${index})">
+      <div class="visit-due-name">${escapeHtml(c.customerName||'')}</div>
+      <div class="visit-due-meta">
+        ${escapeHtml(c.customerStatus||'未填狀態')}｜${escapeHtml(formatVisitDueTiming(c))}｜優先分數 ${escapeHtml(c.priorityScore||0)}<br>
+        最後拜訪日：${escapeHtml(lastVisitText)}<br>
+        最後狀況：${escapeHtml(lastStatusText)}<br>
+        排序原因：${escapeHtml(c.priorityReason||'依狀態與拜訪週期排序')}
+      </div>
+    </div>
+  `;
 }
 
 function toggleVisitDueExpand(){
@@ -1927,7 +2071,7 @@ function toggleVisitDueExpand(){
 }
 
 function openVisitDueDetail(index){
-  const customer=getVisibleVisitDueCustomers()[index];
+  const customer=visitDueRenderedCustomers[index];
 
   if(!customer){
     return;
@@ -1943,15 +2087,16 @@ function formatDueDays(days){
 }
 
 function formatVisitDueTiming(c){
-  return c && c.isNeverVisited ? '從未拜訪' : formatDueDays(c && c.daysSinceVisit);
+  return c && c.reminderType==='firstContact' ? '首次接觸候選' : formatDueDays(c && c.daysSinceVisit);
 }
 
 function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
   const originalCount=Array.isArray(rawList) ? rawList.length : 0;
   const finalCount=Array.isArray(visibleList) ? visibleList.length : 0;
   const hiddenCount=originalCount-finalCount;
-  const dueCandidates=Array.isArray(dueList) ? dueList : [];
-  const dueVisible=visitDueExpanded ? dueCandidates : dueCandidates.slice(0,20);
+  const overdueCandidates=(dueList && Array.isArray(dueList.overdueCandidates)) ? dueList.overdueCandidates : [];
+  const neverVisitedCandidates=(dueList && Array.isArray(dueList.neverVisitedCandidates)) ? dueList.neverVisitedCandidates : [];
+  const visibleGroups=getVisibleVisitDueGroups();
   const passiveCustomers=(Array.isArray(rawList) ? rawList : []).filter(function(c){
     return String(c.visitPolicy||'').trim()==='被動維護';
   });
@@ -1970,15 +2115,27 @@ function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
   console.log('隱藏客戶數',hiddenCount);
   console.log('被動維護客戶數',passiveCustomers.length);
   console.log('被排除的被動維護數',passiveCustomers.length);
-  console.log('待拜訪候選數',dueCandidates.length);
-  console.log('待拜訪顯示數',dueVisible.length);
+  console.log('一般拜訪候選總數',overdueCandidates.length);
+  console.log('首次接觸候選總數',neverVisitedCandidates.length);
+  console.log('首頁顯示一般拜訪數',visibleGroups.overdueCandidates.length);
+  console.log('首頁顯示首次接觸數',visibleGroups.neverVisitedCandidates.length);
   console.log('最終顯示客戶數',finalCount);
-  console.log('前 10 筆待拜訪客戶',dueCandidates.slice(0,10).map(function(c){
+  console.log('前 10 筆一般拜訪候選',overdueCandidates.slice(0,10).map(function(c){
     return {
       customerName:c.customerName||'',
       customerStatus:c.customerStatus||'',
       visitPolicy:c.visitPolicy||'',
       daysSinceVisit:c.daysSinceVisit,
+      priorityScore:c.priorityScore||0,
+      reason:c.priorityReason||''
+    };
+  }));
+  console.log('前 10 筆首次接觸候選',neverVisitedCandidates.slice(0,10).map(function(c){
+    return {
+      customerName:c.customerName||'',
+      customerStatus:c.customerStatus||'',
+      visitPolicy:c.visitPolicy||'',
+      isNeverVisited:!!c.isNeverVisited,
       priorityScore:c.priorityScore||0,
       reason:c.priorityReason||''
     };
