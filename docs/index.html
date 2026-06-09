@@ -1108,6 +1108,7 @@ searchInput.addEventListener('focus',syncViewport);
 searchInput.addEventListener('input',function(){
   const key=this.value.trim();
   clearBtn.style.display=key ? 'block' : 'none';
+  updateSearchFocusReminderVisibility();
 
   render(homeCustomers.filter(function(c){
     return getSearchText(c).includes(key);
@@ -1259,6 +1260,7 @@ function markReportSubmitTap(){
 function clearSearch(){
   searchInput.value='';
   clearBtn.style.display='none';
+  updateSearchFocusReminderVisibility();
   render(homeCustomers);
   searchInput.blur();
   syncViewport();
@@ -1724,6 +1726,11 @@ function loadPendingVisitDrafts(){
 
 function renderDraftReminder(){
   if(!draftReminder || !draftReminderTitle || !draftReminderMeta){
+    return;
+  }
+
+  if(isHomeSearchActive()){
+    draftReminder.style.display='none';
     return;
   }
 
@@ -2232,6 +2239,7 @@ function applySearch(){
   const key=searchInput.value.trim();
 
   clearBtn.style.display=key ? 'block' : 'none';
+  updateSearchFocusReminderVisibility();
 
   if(!key){
     render(homeCustomers);
@@ -2603,6 +2611,11 @@ function renderVisitDueList(mode){
     return;
   }
 
+  if(isHomeSearchActive()){
+    section.style.display='none';
+    return;
+  }
+
   if(mode!=='north' && mode!=='south'){
     section.style.display='none';
     return;
@@ -2691,6 +2704,15 @@ function formatDueDays(days){
 
 function formatVisitDueTiming(c){
   return c && c.reminderType==='firstContact' ? '首次接觸候選' : formatDueDays(c && c.daysSinceVisit);
+}
+
+function isHomeSearchActive(){
+  return !!(searchInput && searchInput.value.trim());
+}
+
+function updateSearchFocusReminderVisibility(){
+  renderDraftReminder();
+  renderVisitDueList(getMode());
 }
 
 function logHomeHideFilterStats(rawList,visibleList,mode,dueList){
