@@ -207,6 +207,155 @@ button{
   font-weight:900;
 }
 
+.quick-home-actions{
+  display:none;
+  margin:10px 12px 0;
+}
+
+.quick-report-btn{
+  width:100%;
+  min-height:58px;
+  border-radius:18px;
+  background:#0f766e;
+  color:#ffffff;
+  font-size:23px;
+  font-weight:900;
+  box-shadow:0 2px 10px rgba(15,118,110,.18);
+}
+
+.draft-reminder{
+  display:none;
+  margin:10px 12px 0;
+  padding:14px;
+  border-radius:18px;
+  background:#fff7ed;
+  border:2px solid #fed7aa;
+  color:#9a3412;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.draft-reminder-title{
+  font-size:22px;
+}
+
+.draft-reminder-meta{
+  margin-top:4px;
+  font-size:16px;
+  line-height:1.35;
+}
+
+.quick-modal{
+  display:none;
+  position:fixed;
+  inset:0;
+  z-index:80;
+  padding:calc(16px + env(safe-area-inset-top)) 12px calc(16px + env(safe-area-inset-bottom));
+  background:rgba(15,23,42,.42);
+}
+
+.quick-modal-card{
+  width:100%;
+  max-height:100%;
+  overflow-y:auto;
+  border-radius:22px;
+  background:#f4f6fb;
+  box-shadow:0 8px 30px rgba(0,0,0,.24);
+}
+
+.quick-modal-head{
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:14px;
+  background:#f4f6fb;
+  border-bottom:1px solid #e5e7eb;
+}
+
+.quick-modal-title{
+  font-size:24px;
+  font-weight:900;
+}
+
+.quick-close{
+  width:42px;
+  height:42px;
+  border-radius:14px;
+  background:#ffffff;
+  color:#374151;
+  font-size:24px;
+  font-weight:900;
+}
+
+.quick-modal-body{
+  padding:12px;
+}
+
+.quick-card{
+  width:100%;
+  margin-bottom:10px;
+  padding:14px;
+  border-radius:18px;
+  background:#ffffff;
+  box-shadow:0 2px 10px rgba(0,0,0,.06);
+  text-align:left;
+}
+
+.quick-card-name{
+  font-size:24px;
+  line-height:1.18;
+  font-weight:900;
+}
+
+.quick-card-meta{
+  margin-top:6px;
+  color:#4b5563;
+  font-size:17px;
+  line-height:1.4;
+}
+
+.quick-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+  margin-top:12px;
+}
+
+.quick-action-btn{
+  min-height:58px;
+  border-radius:16px;
+  font-size:20px;
+  font-weight:900;
+}
+
+.quick-action-primary{background:#2563eb;color:#ffffff}
+.quick-action-secondary{background:#fef3c7;color:#92400e}
+.quick-action-gray{background:#e5e7eb;color:#374151}
+.quick-action-danger{background:#fee2e2;color:#b91c1c}
+
+.quick-input,
+.quick-select,
+.quick-textarea{
+  width:100%;
+  margin-top:9px;
+  padding:13px;
+  border:2px solid #dbeafe;
+  border-radius:16px;
+  background:#ffffff;
+  outline:none;
+  font-size:20px;
+  font-weight:800;
+}
+
+.quick-textarea{
+  min-height:120px;
+  resize:none;
+}
+
 .list{
   padding:8px 12px calc(120px + env(safe-area-inset-bottom));
 }
@@ -678,6 +827,15 @@ textarea{
       </div>
     </div>
 
+    <div class="quick-home-actions" id="quickHomeActions">
+      <button class="quick-report-btn" onclick="startQuickReport()">快速回報</button>
+    </div>
+
+    <section class="draft-reminder" id="draftReminder" onclick="openPendingDrafts()">
+      <div class="draft-reminder-title" id="draftReminderTitle">待補回報 0 筆</div>
+      <div class="draft-reminder-meta" id="draftReminderMeta">點擊補完拜訪內容</div>
+    </section>
+
     <section class="visit-due-section" id="visitDueSection">
       <div class="visit-due-head">
         <div class="visit-due-title">本日提醒</div>
@@ -690,6 +848,16 @@ textarea{
     <div class="result-count" id="resultCount">真實資料載入中...</div>
     <div class="list" id="list">
       <div class="empty">真實資料載入中...</div>
+    </div>
+  </div>
+
+  <div class="quick-modal" id="quickReportModal">
+    <div class="quick-modal-card">
+      <div class="quick-modal-head">
+        <div class="quick-modal-title" id="quickModalTitle">快速回報</div>
+        <button class="quick-close" onclick="closeQuickReportModal()">×</button>
+      </div>
+      <div class="quick-modal-body" id="quickModalBody"></div>
     </div>
   </div>
 
@@ -808,6 +976,8 @@ const JSONP_TIMEOUT_MS = 20000;
 const GET_CUSTOMERS_RETRY_DELAY_MS = 1000;
 const DAILY_REMINDER_OVERDUE_LIMIT = 4;
 const DAILY_REMINDER_FIRST_CONTACT_LIMIT = 1;
+const QUICK_REPORT_RADIUS_KM = 3;
+const QUICK_REPORT_LIMIT = 10;
 
 const fallbackCustomers=[
   {
@@ -891,9 +1061,24 @@ let locationCandidates=[];
 let selectedLocationCustomer=null;
 let currentLocationData=null;
 let isSavingLocation=false;
+let quickGpsData=null;
+let nearbyCustomers=[];
+let selectedQuickCustomer=null;
+let pendingVisitDrafts=[];
+let currentVisitDraft=null;
+let isCreatingVisitDraft=false;
+let isCompletingVisitDraft=false;
+let isVoidingVisitDraft=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
+const quickHomeActions=document.getElementById('quickHomeActions');
+const draftReminder=document.getElementById('draftReminder');
+const draftReminderTitle=document.getElementById('draftReminderTitle');
+const draftReminderMeta=document.getElementById('draftReminderMeta');
+const quickReportModal=document.getElementById('quickReportModal');
+const quickModalTitle=document.getElementById('quickModalTitle');
+const quickModalBody=document.getElementById('quickModalBody');
 const reportNoteArea=document.getElementById('reportNoteArea');
 const reportNote=document.getElementById('reportNote');
 const sendReportBtn=document.getElementById('sendReportBtn');
@@ -1438,6 +1623,8 @@ function loadRealCustomersAttempt(mode,attempt){
     logHomeHideFilterStats(customers,homeCustomers,mode,dailyReminder);
     applySearch();
     renderVisitDueList(mode);
+    updateQuickReportHome(mode);
+    loadPendingVisitDrafts();
     renderLocationResults();
     resetLocationMessageAfterCustomersLoaded();
     syncViewport();
@@ -1483,8 +1670,11 @@ function showCustomersLoadError(err){
   visitDueOverdueCandidates=[];
   visitDueNeverVisitedCandidates=[];
   visitDueRenderedCustomers=[];
+  pendingVisitDrafts=[];
   viewCustomers=[];
   renderVisitDueList(getMode());
+  updateQuickReportHome(getMode());
+  renderDraftReminder();
   document.getElementById('resultCount').innerText='資料載入失敗';
   document.getElementById('list').innerHTML=
     '<div class="empty" style="color:#c62828">資料載入失敗<br>'+
@@ -1493,6 +1683,419 @@ function showCustomersLoadError(err){
   setLocationMessage('資料載入失敗：'+err.message,'error');
   renderLocationResults();
   syncViewport();
+}
+
+function updateQuickReportHome(mode){
+  const active=mode==='north' || mode==='south';
+
+  if(quickHomeActions){
+    quickHomeActions.style.display=active ? 'block' : 'none';
+  }
+
+  if(!active){
+    pendingVisitDrafts=[];
+    renderDraftReminder();
+  }
+}
+
+function loadPendingVisitDrafts(){
+  const mode=getMode();
+
+  if(mode!=='north' && mode!=='south' || !isWriteApiConfigured()){
+    pendingVisitDrafts=[];
+    renderDraftReminder();
+    return;
+  }
+
+  jsonp({
+    action:'getPendingVisitDrafts',
+    token:API_TOKEN,
+    mode:mode
+  }).then(function(data){
+    pendingVisitDrafts=Array.isArray(data) ? data : [];
+    console.log('待補回報數量',pendingVisitDrafts.length);
+    renderDraftReminder();
+  }).catch(function(err){
+    console.log('待補回報載入失敗',err.message);
+    pendingVisitDrafts=[];
+    renderDraftReminder();
+  });
+}
+
+function renderDraftReminder(){
+  if(!draftReminder || !draftReminderTitle || !draftReminderMeta){
+    return;
+  }
+
+  if(!pendingVisitDrafts.length){
+    draftReminder.style.display='none';
+    return;
+  }
+
+  draftReminder.style.display='block';
+  draftReminderTitle.innerText='待補回報 '+pendingVisitDrafts.length+' 筆';
+  draftReminderMeta.innerText='點擊補完拜訪內容';
+}
+
+function startQuickReport(){
+  const mode=getMode();
+
+  if(mode!=='north' && mode!=='south'){
+    return;
+  }
+
+  if(!navigator.geolocation){
+    alert('無法取得目前位置，請開啟定位權限，或改用搜尋客戶回報。');
+    return;
+  }
+
+  quickGpsData=null;
+  nearbyCustomers=[];
+  selectedQuickCustomer=null;
+  openQuickReportModal('快速回報','<div class="empty">正在取得目前位置...</div>');
+
+  navigator.geolocation.getCurrentPosition(function(position){
+    quickGpsData={
+      lat:position.coords.latitude,
+      lng:position.coords.longitude,
+      accuracy:position.coords.accuracy
+    };
+    console.log('快速回報 GPS 成功 lat/lng/accuracy',quickGpsData.lat,quickGpsData.lng,quickGpsData.accuracy);
+    queryNearbyCustomers();
+  },function(){
+    openQuickReportModal(
+      '快速回報',
+      '<div class="quick-card"><div class="quick-card-meta">無法取得目前位置，請開啟定位權限，或改用搜尋客戶回報。</div>'+
+      '<button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button></div>'
+    );
+  },{
+    enableHighAccuracy:true,
+    timeout:12000,
+    maximumAge:0
+  });
+}
+
+function queryNearbyCustomers(){
+  openQuickReportModal('快速回報','<div class="empty">正在查詢附近客戶...</div>');
+
+  jsonp({
+    action:'getNearbyCustomers',
+    mode:getMode(),
+    lat:quickGpsData.lat,
+    lng:quickGpsData.lng,
+    radiusKm:QUICK_REPORT_RADIUS_KM,
+    limit:QUICK_REPORT_LIMIT
+  }).then(function(data){
+    nearbyCustomers=Array.isArray(data && data.customers) ? data.customers : [];
+    console.log('附近客戶查詢結果數',nearbyCustomers.length);
+    console.log('附近客戶前 10 筆 customerName / distanceKm / visitPolicy / customerStatus',nearbyCustomers.slice(0,10).map(function(c){
+      return {
+        customerName:c.customerName||'',
+        distanceKm:c.distanceKm,
+        visitPolicy:c.visitPolicy||'',
+        customerStatus:c.customerStatus||''
+      };
+    }));
+    renderNearbyCustomers(data && data.message ? data.message : '');
+  }).catch(function(err){
+    openQuickReportModal('快速回報','<div class="quick-card"><div class="quick-card-meta">附近客戶查詢失敗：'+escapeHtml(err.message)+'</div></div>');
+  });
+}
+
+function renderNearbyCustomers(message){
+  if(!nearbyCustomers.length){
+    openQuickReportModal(
+      '快速回報',
+      '<div class="quick-card"><div class="quick-card-meta">'+
+      escapeHtml(message || '附近找不到已建立座標的客戶，請用搜尋選擇客戶回報。')+
+      '</div><button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button></div>'
+    );
+    return;
+  }
+
+  quickModalTitle.innerText='附近客戶';
+  quickModalBody.innerHTML=nearbyCustomers.map(function(c,i){
+    const policy=c.visitPolicy ? '｜'+c.visitPolicy : '';
+
+    return `
+      <button class="quick-card" onclick="selectNearbyCustomer(${i})">
+        <div class="quick-card-name">${escapeHtml(c.customerName||'')}</div>
+        <div class="quick-card-meta">
+          距離：約 ${escapeHtml(c.distanceKm)} km<br>
+          ${escapeHtml(c.customerStatus||'未填狀態')}${escapeHtml(policy)}<br>
+          最後拜訪：${escapeHtml(formatNearbyLastVisit(c))}<br>
+          最後狀況：${escapeHtml(c.lastStatus||'尚無狀況')}
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+function selectNearbyCustomer(index){
+  selectedQuickCustomer=nearbyCustomers[index];
+
+  if(!selectedQuickCustomer){
+    return;
+  }
+
+  const accuracy=quickGpsData ? Math.round(quickGpsData.accuracy) : '';
+  quickModalTitle.innerText='選擇回報方式';
+  quickModalBody.innerHTML=`
+    <div class="quick-card">
+      <div class="quick-card-name">${escapeHtml(selectedQuickCustomer.customerName||'')}</div>
+      <div class="quick-card-meta">
+        距離：約 ${escapeHtml(selectedQuickCustomer.distanceKm)} km<br>
+        目前 GPS 精準度：約 ${escapeHtml(accuracy)} 公尺
+      </div>
+      <div class="quick-actions">
+        <button class="quick-action-btn quick-action-primary" onclick="startNormalQuickReport()">正常回報</button>
+        <button class="quick-action-btn quick-action-secondary" onclick="createQuickVisitDraft()">先記到訪，稍後補</button>
+      </div>
+    </div>
+  `;
+}
+
+function startNormalQuickReport(){
+  const customer=findQuickReportCustomer(selectedQuickCustomer);
+
+  closeQuickReportModal();
+  openCustomerDetail(customer);
+}
+
+function createQuickVisitDraft(){
+  if(isCreatingVisitDraft || !selectedQuickCustomer || !quickGpsData){
+    return;
+  }
+
+  if(!isWriteApiConfigured()){
+    alert('尚未設定寫入 API，無法建立拜訪草稿');
+    return;
+  }
+
+  isCreatingVisitDraft=true;
+  quickModalBody.innerHTML='<div class="empty">正在建立拜訪草稿...</div>';
+
+  const payload={
+    mode:getMode(),
+    salesName:getModeLabel(getMode()),
+    customerCode:selectedQuickCustomer.customerCode||'',
+    customerName:selectedQuickCustomer.customerName||'',
+    lat:quickGpsData.lat,
+    lng:quickGpsData.lng,
+    accuracy:quickGpsData.accuracy,
+    note:''
+  };
+
+  jsonp({
+    action:'createVisitDraft',
+    token:API_TOKEN,
+    payload:JSON.stringify(payload)
+  }).then(function(res){
+    isCreatingVisitDraft=false;
+    console.log('建立拜訪草稿 draftId',res && res.draftId);
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">已先記錄到訪，請稍後補上拜訪內容。</div></div>';
+    loadPendingVisitDrafts();
+    setTimeout(closeQuickReportModal,900);
+  }).catch(function(err){
+    isCreatingVisitDraft=false;
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">建立草稿失敗：'+escapeHtml(err.message)+'</div></div>';
+  });
+}
+
+function openPendingDrafts(){
+  openQuickReportModal('待補回報','<div class="empty">載入待補回報...</div>');
+  renderPendingDraftList();
+}
+
+function renderPendingDraftList(){
+  if(!pendingVisitDrafts.length){
+    quickModalTitle.innerText='待補回報';
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">目前沒有待補回報。</div></div>';
+    return;
+  }
+
+  quickModalTitle.innerText='待補回報';
+  quickModalBody.innerHTML=pendingVisitDrafts.map(function(d,i){
+    return `
+      <button class="quick-card" onclick="openVisitDraftDetail(${i})">
+        <div class="quick-card-name">${escapeHtml(d.customerName||'')}</div>
+        <div class="quick-card-meta">
+          建立時間：${escapeHtml(d.createdAt||'')}<br>
+          草稿狀態：${escapeHtml(d.status||'待補內容')}<br>
+          GPS精準度：約 ${escapeHtml(formatAccuracy(d.accuracy))}<br>
+          ${d.note ? '備註：'+escapeHtml(d.note) : '備註：無'}
+        </div>
+      </button>
+    `;
+  }).join('');
+}
+
+function openVisitDraftDetail(index){
+  currentVisitDraft=pendingVisitDrafts[index];
+
+  if(!currentVisitDraft){
+    return;
+  }
+
+  quickModalTitle.innerText='補完回報';
+  quickModalBody.innerHTML=`
+    <div class="quick-card">
+      <div class="quick-card-name">${escapeHtml(currentVisitDraft.customerName||'')}</div>
+      <div class="quick-card-meta">建立時間：${escapeHtml(currentVisitDraft.createdAt||'')}</div>
+      <select class="quick-select" id="draftVisitStatus">
+        <option value="">選擇拜訪狀況</option>
+        <option value="✅ 成交">✅ 成交</option>
+        <option value="🔥 機會">🔥 機會</option>
+        <option value="📌 追蹤">📌 追蹤</option>
+        <option value="⚠️ 異常">⚠️ 異常</option>
+        <option value="💰 收款">💰 收款</option>
+        <option value="☎️ 電訪 / 沒遇到">☎️ 電訪 / 沒遇到</option>
+      </select>
+      <textarea class="quick-textarea" id="draftNote" placeholder="補上拜訪重點">${escapeHtml(currentVisitDraft.note||'')}</textarea>
+      <input class="quick-input" id="draftNextAction" placeholder="後續動作，可空白">
+      <div class="quick-actions">
+        <button class="quick-action-btn quick-action-primary" onclick="completeVisitDraftReport()">完成回報</button>
+        <button class="quick-action-btn quick-action-danger" onclick="voidCurrentVisitDraft()">作廢草稿</button>
+      </div>
+    </div>
+  `;
+}
+
+function completeVisitDraftReport(){
+  if(isCompletingVisitDraft || !currentVisitDraft){
+    return;
+  }
+
+  const status=document.getElementById('draftVisitStatus').value;
+  const note=document.getElementById('draftNote').value.trim();
+  const nextAction=document.getElementById('draftNextAction').value.trim();
+
+  if(!status){
+    alert('請先選擇拜訪狀況');
+    return;
+  }
+
+  if(isNoteRequiredStatus(status) && !note){
+    alert('這個狀態需要補一句重點，方便下次追蹤。');
+    return;
+  }
+
+  if(note.length>300){
+    alert('備註最多 300 字');
+    return;
+  }
+
+  isCompletingVisitDraft=true;
+
+  jsonp({
+    action:'completeVisitDraft',
+    token:API_TOKEN,
+    payload:JSON.stringify({
+      draftId:currentVisitDraft.draftId,
+      visitStatus:status,
+      note:note,
+      nextAction:nextAction
+    })
+  }).then(function(res){
+    isCompletingVisitDraft=false;
+    console.log('完成草稿 draftId / reportId',res && res.draftId,res && res.reportId);
+    alert('回報已寫入');
+    closeQuickReportModal();
+    loadPendingVisitDrafts();
+  }).catch(function(err){
+    isCompletingVisitDraft=false;
+    alert('完成回報失敗：'+err.message);
+  });
+}
+
+function voidCurrentVisitDraft(){
+  if(isVoidingVisitDraft || !currentVisitDraft){
+    return;
+  }
+
+  if(!confirm('確定要作廢這筆草稿？')){
+    return;
+  }
+
+  const reason=prompt('請輸入作廢原因','誤按') || '未填原因';
+  isVoidingVisitDraft=true;
+
+  jsonp({
+    action:'voidVisitDraft',
+    token:API_TOKEN,
+    payload:JSON.stringify({
+      draftId:currentVisitDraft.draftId,
+      reason:reason
+    })
+  }).then(function(res){
+    isVoidingVisitDraft=false;
+    console.log('作廢草稿 draftId',res && res.draftId);
+    closeQuickReportModal();
+    loadPendingVisitDrafts();
+  }).catch(function(err){
+    isVoidingVisitDraft=false;
+    alert('作廢草稿失敗：'+err.message);
+  });
+}
+
+function openQuickReportModal(title,html){
+  quickModalTitle.innerText=title;
+  quickModalBody.innerHTML=html || '';
+  quickReportModal.style.display='block';
+}
+
+function closeQuickReportModal(){
+  quickReportModal.style.display='none';
+  quickModalBody.innerHTML='';
+  selectedQuickCustomer=null;
+  currentVisitDraft=null;
+  isCreatingVisitDraft=false;
+  isCompletingVisitDraft=false;
+  isVoidingVisitDraft=false;
+}
+
+function focusSearchFromQuick(){
+  closeQuickReportModal();
+  searchInput.focus();
+  syncViewport();
+}
+
+function findQuickReportCustomer(customer){
+  const code=String((customer && customer.customerCode) || '').trim();
+  const name=String((customer && customer.customerName) || '').trim();
+  const found=customers.concat(homeCustomers).filter(function(c){
+    return (code && String(c.customerCode||'').trim()===code) ||
+           (name && String(c.customerName||'').trim()===name);
+  })[0];
+
+  return found || customer;
+}
+
+function formatNearbyLastVisit(c){
+  const days=getValidDays(c.daysSinceVisit);
+
+  if(days!==null && days>0){
+    return days+' 天前';
+  }
+
+  if(days===0){
+    return '今天';
+  }
+
+  return c.lastVisitDate ? c.lastVisitDate : '無紀錄';
+}
+
+function formatAccuracy(value){
+  const n=Number(value);
+
+  return isFinite(n) ? Math.round(n)+' 公尺' : '未知';
+}
+
+function getModeLabel(mode){
+  if(mode==='south') return '溪南';
+  if(mode==='north') return '溪北';
+  if(mode==='boss') return '老闆版';
+  return '未指定';
 }
 
 function jsonp(params,options){
