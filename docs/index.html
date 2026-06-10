@@ -976,8 +976,8 @@ const JSONP_TIMEOUT_MS = 20000;
 const GET_CUSTOMERS_RETRY_DELAY_MS = 1000;
 const DAILY_REMINDER_OVERDUE_LIMIT = 4;
 const DAILY_REMINDER_FIRST_CONTACT_LIMIT = 1;
-const QUICK_REPORT_RADIUS_KM = 3;
-const QUICK_REPORT_LIMIT = 10;
+const QUICK_REPORT_RADIUS_KM = 0.5;
+const QUICK_REPORT_LIMIT = 5;
 
 const fallbackCustomers=[
   {
@@ -1814,7 +1814,7 @@ function renderNearbyCustomers(message){
     openQuickReportModal(
       '快速回報',
       '<div class="quick-card"><div class="quick-card-meta">'+
-      escapeHtml(message || '附近找不到已建立座標的客戶，請用搜尋選擇客戶回報。')+
+      escapeHtml(message || '附近找不到已建立座標的客戶，請用搜尋客戶回報。')+
       '</div><button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button></div>'
     );
     return;
@@ -1828,7 +1828,7 @@ function renderNearbyCustomers(message){
       <button class="quick-card" onclick="selectNearbyCustomer(${i})">
         <div class="quick-card-name">${escapeHtml(c.customerName||'')}</div>
         <div class="quick-card-meta">
-          距離：約 ${escapeHtml(c.distanceKm)} km<br>
+          距離：約 ${escapeHtml(formatNearbyDistance(c.distanceKm))}<br>
           ${escapeHtml(c.customerStatus||'未填狀態')}${escapeHtml(policy)}<br>
           最後拜訪：${escapeHtml(formatNearbyLastVisit(c))}<br>
           最後狀況：${escapeHtml(c.lastStatus||'尚無狀況')}
@@ -1851,7 +1851,7 @@ function selectNearbyCustomer(index){
     <div class="quick-card">
       <div class="quick-card-name">${escapeHtml(selectedQuickCustomer.customerName||'')}</div>
       <div class="quick-card-meta">
-        距離：約 ${escapeHtml(selectedQuickCustomer.distanceKm)} km<br>
+        距離：約 ${escapeHtml(formatNearbyDistance(selectedQuickCustomer.distanceKm))}<br>
         目前 GPS 精準度：約 ${escapeHtml(accuracy)} 公尺
       </div>
       <div class="quick-actions">
@@ -2076,6 +2076,20 @@ function findQuickReportCustomer(customer){
   })[0];
 
   return found || customer;
+}
+
+function formatNearbyDistance(distanceKm){
+  const n=Number(distanceKm);
+
+  if(!isFinite(n)){
+    return '未知';
+  }
+
+  if(n<1){
+    return Math.max(0,Math.round(n*1000))+'m';
+  }
+
+  return (Math.round(n*10)/10).toFixed(1).replace(/\.0$/,'')+'km';
 }
 
 function formatNearbyLastVisit(c){
