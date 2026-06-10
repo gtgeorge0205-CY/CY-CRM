@@ -1065,6 +1065,7 @@ let quickGpsData=null;
 let nearbyCustomers=[];
 let selectedQuickCustomer=null;
 let pendingVisitDrafts=[];
+let unmatchedVisitDrafts=[];
 let currentVisitDraft=null;
 let isCreatingVisitDraft=false;
 let isCompletingVisitDraft=false;
@@ -1673,6 +1674,7 @@ function showCustomersLoadError(err){
   visitDueNeverVisitedCandidates=[];
   visitDueRenderedCustomers=[];
   pendingVisitDrafts=[];
+  unmatchedVisitDrafts=[];
   viewCustomers=[];
   renderVisitDueList(getMode());
   updateQuickReportHome(getMode());
@@ -1694,8 +1696,9 @@ function updateQuickReportHome(mode){
     quickHomeActions.style.display=active ? 'block' : 'none';
   }
 
-  if(!active){
+  if(!active && mode!=='boss'){
     pendingVisitDrafts=[];
+    unmatchedVisitDrafts=[];
     renderDraftReminder();
   }
 }
@@ -1703,8 +1706,9 @@ function updateQuickReportHome(mode){
 function loadPendingVisitDrafts(){
   const mode=getMode();
 
-  if(mode!=='north' && mode!=='south' || !isWriteApiConfigured()){
+  if((mode!=='north' && mode!=='south' && mode!=='boss') || !isWriteApiConfigured()){
     pendingVisitDrafts=[];
+    unmatchedVisitDrafts=[];
     renderDraftReminder();
     return;
   }
@@ -1714,12 +1718,26 @@ function loadPendingVisitDrafts(){
     token:API_TOKEN,
     mode:mode
   }).then(function(data){
-    pendingVisitDrafts=Array.isArray(data) ? data : [];
-    console.log('待補回報數量',pendingVisitDrafts.length);
+    const drafts=Array.isArray(data) ? data : [];
+
+    pendingVisitDrafts=drafts.filter(function(d){
+      return d.status==='待補內容';
+    });
+    unmatchedVisitDrafts=drafts.filter(function(d){
+      return d.status==='待指定客戶';
+    });
+
+    if(mode==='boss'){
+      console.log('boss 待指定客戶數',unmatchedVisitDrafts.length);
+    }else{
+      console.log('north / south 待補回報數',pendingVisitDrafts.length);
+    }
+
     renderDraftReminder();
   }).catch(function(err){
     console.log('待補回報載入失敗',err.message);
     pendingVisitDrafts=[];
+    unmatchedVisitDrafts=[];
     renderDraftReminder();
   });
 }
@@ -1731,6 +1749,18 @@ function renderDraftReminder(){
 
   if(isHomeSearchActive()){
     draftReminder.style.display='none';
+    return;
+  }
+
+  if(getMode()==='boss'){
+    if(!unmatchedVisitDrafts.length){
+      draftReminder.style.display='none';
+      return;
+    }
+
+    draftReminder.style.display='block';
+    draftReminderTitle.innerText='待指定客戶 '+unmatchedVisitDrafts.length+' 筆';
+    draftReminderMeta.innerText='點擊查看找不到顧客位置';
     return;
   }
 
@@ -1815,8 +1845,11 @@ function renderNearbyCustomers(message){
       '快速回報',
       '<div class="quick-card"><div class="quick-card-meta">'+
       escapeHtml(message || '附近找不到已建立座標的客戶，請用搜尋客戶回報。')+
-      '</div><button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button></div>'
+      '</div>'+
+      '<button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button>'+
+      '<button class="quick-action-btn quick-action-secondary" style="width:100%;margin-top:8px" onclick="createUnmatchedVisitDraft()">找不到顧客</button></div>'
     );
+    console.log('快速回報找不到附近客戶');
     return;
   }
 
@@ -1909,26 +1942,88 @@ function createQuickVisitDraft(){
   });
 }
 
+function createUnmatchedVisitDraft(){
+  if(isCreatingVisitDraft || !quickGpsData){
+    return;
+  }
+
+  if(!isWriteApiConfigured()){
+    alert('尚未設定寫入 API，無法建立草稿。');
+    return;
+  }
+
+  if(!confirm('系統會送出目前位置，讓管理端之後指定客戶。是否送出？')){
+    return;
+  }
+
+  isCreatingVisitDraft=true;
+  console.log('找不到顧客送出 GPS lat/lng/accuracy',quickGpsData.lat,quickGpsData.lng,quickGpsData.accuracy);
+  quickModalBody.innerHTML='<div class="empty">正在送出目前位置...</div>';
+
+  const payload={
+    mode:getMode(),
+    salesName:getModeLabel(getMode()),
+    lat:quickGpsData.lat,
+    lng:quickGpsData.lng,
+    accuracy:quickGpsData.accuracy,
+    note:'快速回報附近找不到顧客'
+  };
+
+  jsonp({
+    action:'createUnmatchedVisitDraft',
+    token:API_TOKEN,
+    payload:JSON.stringify(payload)
+  }).then(function(res){
+    isCreatingVisitDraft=false;
+    console.log('createUnmatchedVisitDraft 成功 draftId',res && res.draftId);
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">已送出目前位置，待管理端指定客戶。</div></div>';
+    loadPendingVisitDrafts();
+    setTimeout(closeQuickReportModal,1100);
+  }).catch(function(err){
+    isCreatingVisitDraft=false;
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">送出目前位置失敗：'+escapeHtml(err.message)+'</div></div>';
+  });
+}
+
+function getVisibleDraftList(){
+  return getMode()==='boss' ? unmatchedVisitDrafts : pendingVisitDrafts;
+}
+
+function getDraftPanelTitle(){
+  return getMode()==='boss' ? '待指定客戶' : '待補回報';
+}
+
 function openPendingDrafts(){
-  openQuickReportModal('待補回報','<div class="empty">載入待補回報...</div>');
+  openQuickReportModal(getDraftPanelTitle(),'<div class="empty">載入'+escapeHtml(getDraftPanelTitle())+'...</div>');
   renderPendingDraftList();
 }
 
 function renderPendingDraftList(){
-  if(!pendingVisitDrafts.length){
-    quickModalTitle.innerText='待補回報';
-    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">目前沒有待補回報。</div></div>';
+  const draftList=getVisibleDraftList();
+  const title=getDraftPanelTitle();
+
+  if(!draftList.length){
+    quickModalTitle.innerText=title;
+    quickModalBody.innerHTML='<div class="quick-card"><div class="quick-card-meta">目前沒有'+escapeHtml(title)+'。</div></div>';
     return;
   }
 
-  quickModalTitle.innerText='待補回報';
-  quickModalBody.innerHTML=pendingVisitDrafts.map(function(d,i){
+  quickModalTitle.innerText=title;
+  quickModalBody.innerHTML=draftList.map(function(d,i){
+    const isUnmatched=d.status==='待指定客戶';
+    const extra=isUnmatched ?
+      '業務模式：'+escapeHtml(d.mode||'')+'<br>'+
+      '業務名稱：'+escapeHtml(d.salesName||'')+'<br>'+
+      'GPS緯度 / 經度：'+escapeHtml(formatCoordinate(d.lat))+' / '+escapeHtml(formatCoordinate(d.lng))+'<br>' :
+      '';
+
     return `
       <button class="quick-card" onclick="openVisitDraftDetail(${i})">
         <div class="quick-card-name">${escapeHtml(d.customerName||'')}</div>
         <div class="quick-card-meta">
           建立時間：${escapeHtml(d.createdAt||'')}<br>
           草稿狀態：${escapeHtml(d.status||'待補內容')}<br>
+          ${extra}
           GPS精準度：約 ${escapeHtml(formatAccuracy(d.accuracy))}<br>
           ${d.note ? '備註：'+escapeHtml(d.note) : '備註：無'}
         </div>
@@ -1938,9 +2033,14 @@ function renderPendingDraftList(){
 }
 
 function openVisitDraftDetail(index){
-  currentVisitDraft=pendingVisitDrafts[index];
+  currentVisitDraft=getVisibleDraftList()[index];
 
   if(!currentVisitDraft){
+    return;
+  }
+
+  if(currentVisitDraft.status==='待指定客戶'){
+    openUnmatchedDraftDetail();
     return;
   }
 
@@ -1962,6 +2062,32 @@ function openVisitDraftDetail(index){
       <input class="quick-input" id="draftNextAction" placeholder="後續動作，可空白">
       <div class="quick-actions">
         <button class="quick-action-btn quick-action-primary" onclick="completeVisitDraftReport()">完成回報</button>
+        <button class="quick-action-btn quick-action-danger" onclick="voidCurrentVisitDraft()">作廢草稿</button>
+      </div>
+    </div>
+  `;
+}
+
+function openUnmatchedDraftDetail(){
+  const lat=formatCoordinate(currentVisitDraft.lat);
+  const lng=formatCoordinate(currentVisitDraft.lng);
+  const mapUrl=lat && lng ? 'https://www.google.com/maps?q='+encodeURIComponent(lat+','+lng) : '';
+
+  quickModalTitle.innerText='待指定客戶';
+  quickModalBody.innerHTML=`
+    <div class="quick-card">
+      <div class="quick-card-name">${escapeHtml(currentVisitDraft.customerName||'找不到顧客')}</div>
+      <div class="quick-card-meta">
+        建立時間：${escapeHtml(currentVisitDraft.createdAt||'')}<br>
+        業務模式：${escapeHtml(currentVisitDraft.mode||'')}<br>
+        業務名稱：${escapeHtml(currentVisitDraft.salesName||'')}<br>
+        GPS精準度：約 ${escapeHtml(formatAccuracy(currentVisitDraft.accuracy))}<br>
+        GPS緯度 / 經度：${escapeHtml(lat)} / ${escapeHtml(lng)}<br>
+        狀態：${escapeHtml(currentVisitDraft.status||'待指定客戶')}<br>
+        ${currentVisitDraft.note ? '備註：'+escapeHtml(currentVisitDraft.note) : '備註：無'}
+      </div>
+      ${mapUrl ? '<a class="quick-action-btn quick-action-secondary" style="display:block;text-align:center;text-decoration:none;margin-top:12px" href="'+escapeHtml(mapUrl)+'" target="_blank" rel="noopener">Google Maps 查看位置</a>' : ''}
+      <div class="quick-actions">
         <button class="quick-action-btn quick-action-danger" onclick="voidCurrentVisitDraft()">作廢草稿</button>
       </div>
     </div>
