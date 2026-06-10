@@ -1839,15 +1839,24 @@ function queryNearbyCustomers(){
   });
 }
 
+function renderQuickReportFallbackButtons(){
+  console.log('快速回報面板顯示找不到顧客按鈕');
+
+  return ''+
+    '<div class="quick-card">'+
+      '<button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:0" onclick="focusSearchFromQuick()">搜尋客戶</button>'+
+      '<button class="quick-action-btn quick-action-secondary" style="width:100%;margin-top:8px" onclick="createUnmatchedVisitDraft()">找不到顧客</button>'+
+    '</div>';
+}
+
 function renderNearbyCustomers(message){
   if(!nearbyCustomers.length){
     openQuickReportModal(
       '快速回報',
       '<div class="quick-card"><div class="quick-card-meta">'+
       escapeHtml(message || '附近找不到已建立座標的客戶，請用搜尋客戶回報。')+
-      '</div>'+
-      '<button class="quick-action-btn quick-action-primary" style="width:100%;margin-top:12px" onclick="focusSearchFromQuick()">搜尋客戶</button>'+
-      '<button class="quick-action-btn quick-action-secondary" style="width:100%;margin-top:8px" onclick="createUnmatchedVisitDraft()">找不到顧客</button></div>'
+      '</div></div>'+
+      renderQuickReportFallbackButtons()
     );
     console.log('快速回報找不到附近客戶');
     return;
@@ -1868,7 +1877,7 @@ function renderNearbyCustomers(message){
         </div>
       </button>
     `;
-  }).join('');
+  }).join('')+renderQuickReportFallbackButtons();
 }
 
 function selectNearbyCustomer(index){
