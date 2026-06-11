@@ -161,18 +161,23 @@
     .analysis-item strong{color:#fff}
     .analysis-tag{display:inline-block;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.1);border-radius:8px;padding:2px 6px;color:#cffff7;font-size:11px;font-weight:900;margin-right:5px}
     .analysis-rank{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:8px;background:var(--teal-soft);color:#dffff9;font-weight:900;margin-right:7px}
-    .action-signal-wrap{display:grid;gap:8px}
-    .action-signal-card{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.028);padding:11px;line-height:1.55}
-    .action-signal-card.priority-a{border-color:rgba(0,229,192,.5);background:linear-gradient(180deg,rgba(0,229,192,.12),rgba(17,24,32,.76))}
-    .action-signal-card.priority-b{border-color:rgba(250,204,21,.34);background:linear-gradient(180deg,rgba(250,204,21,.08),rgba(17,24,32,.72))}
-    .action-signal-card.priority-c{border-color:rgba(148,163,184,.22)}
+    .action-signal-wrap{display:grid;grid-template-columns:1fr;gap:10px}
+    .action-signal-card{position:relative;border:1px solid var(--line-soft);border-left:4px solid rgba(148,163,184,.42);border-radius:8px;background:rgba(255,255,255,.028);padding:11px 12px;line-height:1.52;min-width:0}
+    .action-signal-card.priority-a{border-color:rgba(0,229,192,.44);border-left-color:var(--teal);background:linear-gradient(180deg,rgba(0,229,192,.09),rgba(17,24,32,.74))}
+    .action-signal-card.priority-b{border-color:rgba(250,204,21,.3);border-left-color:var(--yellow);background:linear-gradient(180deg,rgba(250,204,21,.065),rgba(17,24,32,.72))}
+    .action-signal-card.priority-c{border-color:rgba(148,163,184,.2);border-left-color:rgba(148,163,184,.55);background:rgba(255,255,255,.022)}
     .signal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
-    .signal-title{font-size:15px;font-weight:950;color:#fff}
-    .signal-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;border-radius:8px;border:1px solid rgba(0,229,192,.34);background:var(--teal-soft);color:#dffff9;font-weight:950}
-    .priority-b .signal-badge{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.1);color:#fde68a}
-    .priority-c .signal-badge{border-color:rgba(148,163,184,.24);background:rgba(148,163,184,.08);color:#d8dee6}
-    .signal-meta{font-size:12px;color:var(--muted);margin-bottom:7px}
-    .signal-text{font-size:13px;color:var(--silver);margin-top:5px}
+    .signal-title{font-size:22px;font-weight:950;line-height:1.18;color:#fff;word-break:break-word}
+    .signal-badge{display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid rgba(0,229,192,.32);background:var(--teal-soft);color:#dffff9;font-weight:950;white-space:nowrap}
+    .signal-priority{min-width:34px;height:30px;font-size:15px}
+    .priority-b .signal-priority{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.1);color:#fde68a}
+    .priority-c .signal-priority{border-color:rgba(148,163,184,.24);background:rgba(148,163,184,.08);color:#d8dee6}
+    .signal-meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+    .signal-tag{display:inline-flex;align-items:center;border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);color:var(--silver);font-size:12px;font-weight:800;min-height:26px;padding:3px 7px}
+    .signal-tag.type{border-color:rgba(0,229,192,.28);background:rgba(0,229,192,.08);color:#dffff9}
+    .priority-b .signal-tag.type{border-color:rgba(250,204,21,.28);background:rgba(250,204,21,.08);color:#fde68a}
+    .priority-c .signal-tag.type{border-color:rgba(148,163,184,.22);background:rgba(148,163,184,.06);color:#d8dee6}
+    .signal-text{font-size:13px;color:var(--silver);margin-top:5px;word-break:break-word}
     .signal-text b{color:#fff}
     .signal-numbers{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
     .signal-numbers span{border:1px solid var(--line-soft);border-radius:8px;padding:5px 7px;background:rgba(255,255,255,.025)}
@@ -216,6 +221,14 @@
       .topbar{padding:16px 18px}
     }
 
+    @media (min-width:1200px){
+      .action-signal-wrap{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    }
+
+    @media (min-width:1600px){
+      .action-signal-wrap{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+
     @media (max-width:768px){
       .shell{padding:10px;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
       .topbar{padding:12px;gap:10px;align-items:flex-start}
@@ -228,6 +241,10 @@
       .metric-value{font-size:38px;min-height:38px}
       .sector-grid,.split,.analysis-grid{grid-template-columns:1fr}
       .sales-status-grid{grid-template-columns:1fr 1fr}
+      .action-signal-wrap{grid-template-columns:1fr}
+      .signal-title{font-size:19px}
+      .signal-head{align-items:flex-start}
+      .action-signal-card{padding:10px}
       .panel,.sector-card,.search-box{padding:11px}
       .list-card{padding:11px}
       .section{margin-top:13px}
@@ -593,26 +610,35 @@
     }
 
     function renderActionSignals(rows){
+      const isMobileActionView=window.matchMedia && window.matchMedia('(max-width: 768px)').matches;
+
+      if(isMobileActionView){
+        console.log('mobile action signals render start');
+        console.log('mobile action signals count',rows.length);
+      }
+
       if(!rows.length){
         return '<div class="empty">尚未產生 Boss行動清單，請先到銷貨分析執行一鍵更新全部。</div>';
       }
 
       const shown=actionSignalsExpanded?rows:rows.slice(0,10);
       const toggle=rows.length>10
-        ? '<button class="toggle-btn" onclick="toggleActionSignals()">'+(actionSignalsExpanded?'收合':'顯示更多')+'</button>'
+        ? '<button class="toggle-btn" onclick="toggleActionSignals()">'+(actionSignalsExpanded?'收合行動清單':'顯示更多行動')+'</button>'
         : '';
 
-      return '<div class="action-signal-wrap">'+shown.map(function(row){
+      const html='<div class="action-signal-wrap">'+shown.map(function(row){
         const priority=String(row.priority||'C').toUpperCase();
         const priorityClass=priority==='A'?'priority-a':(priority==='B'?'priority-b':'priority-c');
 
         return '<div class="action-signal-card '+priorityClass+'">'+
           '<div class="signal-head">'+
-            '<div>'+
-              '<div class="signal-title">'+escapeHtml(row.actionType||'待處理行動')+'</div>'+
-              '<div class="signal-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.customerStatus||'未分類')+'</div>'+
-            '</div>'+
-            '<span class="signal-badge">'+escapeHtml(priority)+'</span>'+
+            '<div class="signal-title">'+escapeHtml(row.customerName||'未命名客戶')+'</div>'+
+            '<span class="signal-badge signal-priority">'+escapeHtml(priority)+'</span>'+
+          '</div>'+
+          '<div class="signal-meta">'+
+            '<span class="signal-tag type">'+escapeHtml(row.actionType||'待處理行動')+'</span>'+
+            '<span class="signal-tag">'+escapeHtml(row.customerStatus||'未分類')+'</span>'+
+            '<span class="signal-tag">'+escapeHtml(row.owner||'未指定')+'</span>'+
           '</div>'+
           '<div class="signal-text"><b>問題</b> '+escapeHtml(row.problemSummary||'未填寫')+'</div>'+
           '<div class="signal-text"><b>建議</b> '+escapeHtml(row.suggestedAction||'未填寫')+'</div>'+
@@ -624,6 +650,12 @@
           '</div>'+
         '</div>';
       }).join('')+toggle+'</div>';
+
+      if(isMobileActionView){
+        console.log('mobile action signals rendered');
+      }
+
+      return html;
     }
 
     function toggleActionSignals(){
