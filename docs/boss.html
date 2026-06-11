@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>新晴揚 BOSS PIT WALL</title>
+  <title>新晴揚 BOSS 戰情中心</title>
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
   <meta name="apple-mobile-web-app-title" content="新晴揚Boss">
@@ -161,6 +161,33 @@
     .analysis-item strong{color:#fff}
     .analysis-tag{display:inline-block;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.1);border-radius:8px;padding:2px 6px;color:#cffff7;font-size:11px;font-weight:900;margin-right:5px}
     .analysis-rank{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:8px;background:var(--teal-soft);color:#dffff9;font-weight:900;margin-right:7px}
+    .action-signal-wrap{display:grid;gap:8px}
+    .action-signal-card{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.028);padding:11px;line-height:1.55}
+    .action-signal-card.priority-a{border-color:rgba(0,229,192,.5);background:linear-gradient(180deg,rgba(0,229,192,.12),rgba(17,24,32,.76))}
+    .action-signal-card.priority-b{border-color:rgba(250,204,21,.34);background:linear-gradient(180deg,rgba(250,204,21,.08),rgba(17,24,32,.72))}
+    .action-signal-card.priority-c{border-color:rgba(148,163,184,.22)}
+    .signal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:7px}
+    .signal-title{font-size:15px;font-weight:950;color:#fff}
+    .signal-badge{display:inline-flex;align-items:center;justify-content:center;min-width:34px;height:28px;border-radius:8px;border:1px solid rgba(0,229,192,.34);background:var(--teal-soft);color:#dffff9;font-weight:950}
+    .priority-b .signal-badge{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.1);color:#fde68a}
+    .priority-c .signal-badge{border-color:rgba(148,163,184,.24);background:rgba(148,163,184,.08);color:#d8dee6}
+    .signal-meta{font-size:12px;color:var(--muted);margin-bottom:7px}
+    .signal-text{font-size:13px;color:var(--silver);margin-top:5px}
+    .signal-text b{color:#fff}
+    .signal-numbers{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;font-size:12px;color:var(--muted)}
+    .signal-numbers span{border:1px solid var(--line-soft);border-radius:8px;padding:5px 7px;background:rgba(255,255,255,.025)}
+    .report-head{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;margin-bottom:10px}
+    .report-count{font-size:42px;font-weight:950;color:#fff;line-height:.95;text-shadow:0 0 16px rgba(0,229,192,.14)}
+    .report-window{font-size:12px;color:var(--muted);line-height:1.5}
+    .owner-counts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
+    .owner-pill{border:1px solid rgba(0,229,192,.22);background:rgba(0,229,192,.08);border-radius:8px;padding:7px 9px;color:#dffff9;font-size:12px;font-weight:900}
+    .report-card{border-top:1px solid var(--line-soft);padding:10px 0;line-height:1.58}
+    .report-card:first-child{border-top:0}
+    .report-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;color:#fff;font-weight:900}
+    .report-type{border:1px solid rgba(0,229,192,.25);background:rgba(0,229,192,.08);border-radius:8px;padding:2px 6px;color:#dffff9;font-size:11px;white-space:nowrap}
+    .report-meta{font-size:12px;color:var(--muted);margin-top:4px}
+    .report-content{font-size:13px;color:var(--silver);margin-top:6px;white-space:pre-wrap;word-break:break-word}
+    .toggle-btn{width:100%;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.08);color:#dffff9;border-radius:8px;min-height:44px;padding:9px 12px;font-weight:900;margin-top:10px}
     .search-box{padding:12px}
     .search-input{
       width:100%;
@@ -218,9 +245,9 @@
   <main class="shell">
     <header class="topbar">
       <div class="topbar-content">
-        <div class="eyebrow">Operation Status Center</div>
-        <div class="title">新晴揚 BOSS PIT WALL</div>
-        <div class="subtitle">冷冽戰情儀表板｜營運、異常、座標與今日回報</div>
+        <div class="eyebrow">即時營運看板</div>
+        <div class="title">新晴揚 BOSS 戰情中心</div>
+        <div class="subtitle">即時營運看板｜營運、異常、銷貨分析與近兩日回報</div>
         <div class="sub">最後更新：<span id="generatedAt">尚未載入</span></div>
       </div>
       <button class="refresh" onclick="loadDashboard()">重新整理</button>
@@ -233,7 +260,7 @@
     <section class="section" id="dashboard" style="display:none">
       <div class="section-head">
         <div>
-          <div class="section-kicker">TELEMETRY｜今日營運</div>
+          <div class="section-kicker">今日營運</div>
           <h2 class="section-title">今日營運提醒</h2>
         </div>
       </div>
@@ -241,7 +268,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">EXCEPTION QUEUE｜待處理異常</div>
+          <div class="section-kicker">待處理異常</div>
           <h2 class="section-title">待處理異常</h2>
         </div>
       </div>
@@ -266,7 +293,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">SECTOR STATUS｜業務分區</div>
+          <div class="section-kicker">業務分區</div>
           <h2 class="section-title">業務分區狀況</h2>
         </div>
       </div>
@@ -274,15 +301,15 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">TODAY REPORTS｜今日回報</div>
-          <h2 class="section-title">今日回報</h2>
+          <div class="section-kicker">業務回報追蹤</div>
+          <h2 class="section-title">近兩日回報</h2>
         </div>
       </div>
       <div class="panel" id="todayReports"></div>
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">CUSTOMER STATUS｜客戶狀態</div>
+          <div class="section-kicker">客戶狀態</div>
           <h2 class="section-title">客戶狀態摘要</h2>
         </div>
       </div>
@@ -290,7 +317,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">SEARCH CONSOLE｜客戶快速搜尋</div>
+          <div class="section-kicker">客戶快速搜尋</div>
           <h2 class="section-title">客戶快速搜尋</h2>
         </div>
       </div>
@@ -308,6 +335,8 @@
     const JSONP_TIMEOUT_MS=20000;
     let dashboardData=null;
     let customers=[];
+    let reportExpanded=false;
+    let actionSignalsExpanded=false;
 
     document.getElementById('customerSearch').addEventListener('input',renderCustomerSearch);
     loadDashboard();
@@ -352,7 +381,7 @@
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
       renderSalesSummary(data.salesSummary||{});
-      renderTodayReports(data.todayReports||[]);
+      renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
     }
 
@@ -379,7 +408,7 @@
         return;
       }
 
-      const codeMap={'溪南':'SOUTH SECTOR','溪北':'NORTH SECTOR','其他':'OTHER SECTOR'};
+      const codeMap={'溪南':'溪南區','溪北':'溪北區','其他':'其他'};
       document.getElementById('ownerSummary').innerHTML=rows.map(function(row){
         return '<div class="sector-card">'+
           '<div class="sector-code">'+escapeHtml(codeMap[row.ownerName]||'OTHER SECTOR')+'</div>'+
@@ -429,15 +458,72 @@
       });
     }
 
-    function renderTodayReports(rows){
-      document.getElementById('todayReports').innerHTML=rows.slice(0,20).map(function(row){
-        return '<div class="list-card">'+
-          '<div class="card-name">'+escapeHtml(row.customerName||'未命名客戶')+'</div>'+
-          '<div class="card-meta"><b>時間</b> '+escapeHtml(row.reportTime||'')+'<br>'+
-          '<b>拜訪狀況</b> '+escapeHtml(row.visitStatus||'')+'<br>'+
-          '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
-        '</div>';
-      }).join('') || '<div class="empty">今天尚無正式回報。</div>';
+    function renderReportSummary(summary){
+      const target=document.getElementById('todayReports');
+
+      try{
+        summary=summary||{};
+        const reports=Array.isArray(summary.reports)?summary.reports:[];
+        const byOwner=Array.isArray(summary.byOwner)?summary.byOwner:[];
+
+        if(summary.message && !reports.length){
+          console.log('boss recent reports missing',summary.message);
+          target.innerHTML='<div class="empty">暫時無法讀取業務回報。</div>';
+          return;
+        }
+
+        console.log('boss recent reports loaded',reports.length);
+        const shown=reportExpanded?reports:reports.slice(0,10);
+        const toggle=reports.length>10
+          ? '<button class="toggle-btn" onclick="toggleReportDetails()">'+(reportExpanded?'收合':'顯示更多')+'</button>'
+          : '';
+
+        target.innerHTML=
+          '<div class="report-head">'+
+            '<div class="report-count">'+num(summary.totalCount)+'</div>'+
+            '<div>'+
+              '<div class="card-name">'+escapeHtml(summary.rangeLabel||'近48小時回報')+'</div>'+
+              '<div class="report-window">'+escapeHtml(summary.startTime||'')+' → '+escapeHtml(summary.endTime||'')+'</div>'+
+            '</div>'+
+          '</div>'+
+          renderOwnerReportCounts(byOwner)+
+          (reports.length
+            ? '<div>'+shown.map(renderReportCard).join('')+'</div>'+toggle
+            : '<div class="empty">近兩日尚無業務回報。</div>');
+      }catch(err){
+        console.log('boss recent report detail render error',err.message);
+        target.innerHTML='<div class="error">業務回報追蹤渲染失敗：'+escapeHtml(err.message)+'</div>';
+      }
+    }
+
+    function renderOwnerReportCounts(rows){
+      if(!rows.length){
+        return '<div class="owner-counts"><span class="owner-pill">尚無業務筆數</span></div>';
+      }
+
+      return '<div class="owner-counts">'+rows.map(function(row){
+        return '<span class="owner-pill">'+escapeHtml(row.owner||'未指定')+' '+num(row.count)+'</span>';
+      }).join('')+'</div>';
+    }
+
+    function renderReportCard(row){
+      const mapsUrl=row.googleMapsUrl || (row.lat&&row.lng?'https://www.google.com/maps?q='+encodeURIComponent(row.lat+','+row.lng):'');
+
+      return '<div class="report-card">'+
+        '<div class="report-title">'+
+          '<span>'+escapeHtml(row.customerName||'未命名客戶')+'</span>'+
+          '<span class="report-type">'+escapeHtml(row.reportType||row.status||'回報')+'</span>'+
+        '</div>'+
+        '<div class="report-meta">'+escapeHtml(row.timestamp||row.date||'')+'｜'+escapeHtml(row.owner||'未指定')+'</div>'+
+        '<div class="report-content">'+escapeHtml(row.content||row.note||'無回報內容')+'</div>'+
+        (row.status?'<div class="report-meta">狀態：'+escapeHtml(row.status)+'</div>':'')+
+        (mapsUrl?'<div class="actions"><a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a></div>':'')+
+      '</div>';
+    }
+
+    function toggleReportDetails(){
+      reportExpanded=!reportExpanded;
+      renderReportSummary((dashboardData&&dashboardData.reportSummary)||{});
     }
 
     function renderCustomerStatus(rows,extra){
@@ -463,40 +549,86 @@
         const alerts=Array.isArray(summary.alerts)?summary.alerts:[];
         const topProfitCustomers=Array.isArray(summary.topProfitCustomers)?summary.topProfitCustomers:[];
         const decliningCustomers=Array.isArray(summary.decliningCustomers)?summary.decliningCustomers:[];
+        const actionSignals=Array.isArray(summary.actionSignals)?summary.actionSignals:[];
 
-        if(summary.message && !statusStats.length && !alerts.length && !topProfitCustomers.length && !decliningCustomers.length){
+        if(summary.message && !statusStats.length && !alerts.length && !topProfitCustomers.length && !decliningCustomers.length && !actionSignals.length){
           console.log('boss sales summary missing',summary.message);
           target.innerHTML='<div class="empty">尚未讀取到銷貨分析摘要</div>';
           return;
         }
 
         console.log('boss sales summary loaded');
+        if(actionSignals.length){
+          console.log('boss action signals loaded',actionSignals.length);
+        }else{
+          console.log('boss action signals missing');
+        }
+
         target.innerHTML=
           '<div class="sales-updated">銷貨分析更新：'+escapeHtml(summary.updatedAt||'尚未讀取到銷貨分析摘要')+'</div>'+
           '<div class="sales-summary">'+
             '<div class="analysis-panel">'+
-              '<h3 class="analysis-title">經營狀態</h3>'+
+              '<h3 class="analysis-title">Boss行動清單</h3>'+
+              renderActionSignals(actionSignals)+
+            '</div>'+
+            '<div class="analysis-panel">'+
+              '<h3 class="analysis-title">經營狀態摘要</h3>'+
               renderSalesStatusStats(statusStats)+
             '</div>'+
             '<div class="analysis-grid">'+
               '<div class="analysis-panel">'+
-                '<h3 class="analysis-title">重點警示</h3>'+
-                renderSalesAlerts(alerts.slice(0,10))+
-              '</div>'+
-              '<div class="analysis-panel">'+
                 '<h3 class="analysis-title">毛利前10</h3>'+
                 renderTopProfitCustomers(topProfitCustomers.slice(0,10))+
               '</div>'+
-            '</div>'+
-            '<div class="analysis-panel">'+
-              '<h3 class="analysis-title">觀察中 / 下滑客戶</h3>'+
-              renderDecliningCustomers(decliningCustomers.slice(0,10))+
+              '<div class="analysis-panel">'+
+                '<h3 class="analysis-title">觀察中 / 下滑客戶</h3>'+
+                renderDecliningCustomers(decliningCustomers.slice(0,10))+
+              '</div>'+
             '</div>'+
           '</div>';
       }catch(err){
         console.log('boss sales summary render error',err.message);
         target.innerHTML='<div class="error">銷貨分析摘要渲染失敗：'+escapeHtml(err.message)+'</div>';
       }
+    }
+
+    function renderActionSignals(rows){
+      if(!rows.length){
+        return '<div class="empty">尚未產生 Boss行動清單，請先到銷貨分析執行一鍵更新全部。</div>';
+      }
+
+      const shown=actionSignalsExpanded?rows:rows.slice(0,10);
+      const toggle=rows.length>10
+        ? '<button class="toggle-btn" onclick="toggleActionSignals()">'+(actionSignalsExpanded?'收合':'顯示更多')+'</button>'
+        : '';
+
+      return '<div class="action-signal-wrap">'+shown.map(function(row){
+        const priority=String(row.priority||'C').toUpperCase();
+        const priorityClass=priority==='A'?'priority-a':(priority==='B'?'priority-b':'priority-c');
+
+        return '<div class="action-signal-card '+priorityClass+'">'+
+          '<div class="signal-head">'+
+            '<div>'+
+              '<div class="signal-title">'+escapeHtml(row.actionType||'待處理行動')+'</div>'+
+              '<div class="signal-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.customerStatus||'未分類')+'</div>'+
+            '</div>'+
+            '<span class="signal-badge">'+escapeHtml(priority)+'</span>'+
+          '</div>'+
+          '<div class="signal-text"><b>問題</b> '+escapeHtml(row.problemSummary||'未填寫')+'</div>'+
+          '<div class="signal-text"><b>建議</b> '+escapeHtml(row.suggestedAction||'未填寫')+'</div>'+
+          '<div class="signal-text"><b>依據</b> '+escapeHtml(row.basis||'未填寫')+'</div>'+
+          '<div class="signal-numbers">'+
+            '<span>總毛利 '+formatMoney(row.totalGrossProfit)+'</span>'+
+            '<span>近90天 '+formatMoney(row.grossProfit90d)+'</span>'+
+            '<span>最後交易 '+escapeHtml(row.lastTradeDate||'無')+'</span>'+
+          '</div>'+
+        '</div>';
+      }).join('')+toggle+'</div>';
+    }
+
+    function toggleActionSignals(){
+      actionSignalsExpanded=!actionSignalsExpanded;
+      renderSalesSummary((dashboardData&&dashboardData.salesSummary)||{});
     }
 
     function renderSalesStatusStats(rows){
