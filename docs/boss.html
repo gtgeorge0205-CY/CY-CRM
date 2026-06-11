@@ -3,62 +3,178 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>新晴揚 Boss 戰情中心</title>
+  <title>新晴揚 BOSS PIT WALL</title>
   <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
   <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
   <meta name="apple-mobile-web-app-title" content="新晴揚Boss">
-  <meta name="theme-color" content="#0f172a">
+  <meta name="theme-color" content="#05070a">
   <style>
+    :root{
+      --bg:#05070a;
+      --bg-2:#0a0f14;
+      --panel:#111820;
+      --panel-2:#151e27;
+      --line:#263340;
+      --line-soft:rgba(170,184,197,.16);
+      --text:#f5f7fa;
+      --muted:#94a3b8;
+      --silver:#d8dee6;
+      --teal:#00e5c0;
+      --teal-soft:rgba(0,229,192,.14);
+      --yellow:#facc15;
+      --red:#f87171;
+      --shadow:0 22px 48px rgba(0,0,0,.34);
+    }
+
     *{box-sizing:border-box}
-    html,body{margin:0;width:100%;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;background:#f4f6fb;color:#172033}
-    body{overflow-x:hidden}
+    html,body{margin:0;width:100%;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;background:var(--bg);color:var(--text)}
+    body{
+      overflow-x:hidden;
+      background:
+        linear-gradient(135deg,rgba(0,229,192,.08),transparent 28%),
+        repeating-linear-gradient(120deg,rgba(255,255,255,.035) 0,rgba(255,255,255,.035) 1px,transparent 1px,transparent 18px),
+        radial-gradient(circle at 75% 0%,rgba(148,163,184,.12),transparent 34%),
+        var(--bg);
+    }
     button,input{font:inherit}
-    .shell{width:100%;min-height:100vh;padding:16px;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
-    .topbar{background:#0f172a;color:#fff;border-radius:8px;padding:18px 16px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
-    .title{font-size:22px;font-weight:800;line-height:1.25}
-    .sub{font-size:13px;color:#cbd5e1;margin-top:6px}
-    .refresh{border:0;background:#fff;color:#0f172a;border-radius:8px;padding:10px 12px;font-weight:700;white-space:nowrap}
-    .section{margin-top:16px}
-    .section-title{font-size:16px;font-weight:800;margin:0 0 10px}
+    button{cursor:pointer}
+
+    .shell{width:100%;min-height:100vh;padding:14px;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+    .topbar{
+      position:relative;
+      overflow:hidden;
+      border:1px solid rgba(0,229,192,.24);
+      border-radius:8px;
+      background:linear-gradient(135deg,#0c1117,#111923 62%,#08110f);
+      box-shadow:var(--shadow);
+      padding:18px;
+      display:flex;
+      gap:14px;
+      align-items:flex-start;
+      justify-content:space-between;
+    }
+    .topbar:before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:linear-gradient(90deg,rgba(0,229,192,.2),transparent 22%,transparent 72%,rgba(216,222,230,.08));
+      pointer-events:none;
+    }
+    .topbar-content,.refresh{position:relative;z-index:1}
+    .eyebrow{font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:0;margin-bottom:7px}
+    .title{font-size:24px;font-weight:900;line-height:1.16;color:#fff}
+    .subtitle{font-size:13px;color:var(--silver);margin-top:6px}
+    .sub{font-size:12px;color:var(--muted);margin-top:8px}
+    .refresh{
+      border:1px solid rgba(0,229,192,.45);
+      background:rgba(0,229,192,.1);
+      color:#eafffb;
+      border-radius:8px;
+      padding:10px 12px;
+      font-weight:900;
+      white-space:nowrap;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+    }
+
+    .section{margin-top:18px}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .section-title{font-size:14px;font-weight:900;margin:0;color:#e8edf3;text-transform:uppercase}
+    .section-kicker{font-size:11px;color:var(--teal);font-weight:800;text-transform:uppercase}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-    .metric,.panel,.list-card,.search-box{background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
-    .metric{padding:14px}
-    .metric-value{font-size:28px;font-weight:900;letter-spacing:0;color:#0f172a}
-    .metric-label{font-size:13px;color:#64748b;margin-top:3px}
+    .metric,.panel,.list-card,.search-box,.sector-card{
+      background:linear-gradient(180deg,var(--panel),#0d131a);
+      border:1px solid var(--line);
+      border-radius:8px;
+      box-shadow:0 12px 28px rgba(0,0,0,.24);
+    }
+    .metric{
+      min-height:122px;
+      padding:14px;
+      position:relative;
+      overflow:hidden;
+    }
+    .metric:after{
+      content:"";
+      position:absolute;
+      left:14px;
+      right:14px;
+      bottom:12px;
+      height:2px;
+      background:linear-gradient(90deg,var(--teal),transparent);
+      opacity:.72;
+    }
+    .metric.warning{border-color:rgba(250,204,21,.55);background:linear-gradient(180deg,#1d1a10,#111820)}
+    .metric.warning:after{background:linear-gradient(90deg,var(--yellow),transparent)}
+    .metric-label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase}
+    .metric-value{font-size:34px;font-weight:950;color:#fff;line-height:1;margin-top:12px}
+    .metric-note{font-size:12px;color:var(--silver);margin-top:9px}
     .panel{padding:14px}
-    .owner-row,.status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #eef2f7}
-    .owner-row:first-child,.status-row:first-child{border-top:0}
-    .owner-name,.status-name{font-weight:800}
-    .owner-meta,.status-count{font-size:13px;color:#475569;text-align:right;line-height:1.6}
     .split{display:grid;grid-template-columns:1fr;gap:12px}
-    .list-card{padding:12px;margin-top:8px}
-    .card-name{font-weight:800;margin-bottom:6px}
-    .card-meta{font-size:13px;color:#475569;line-height:1.6;word-break:break-word}
-    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    .action{border:0;border-radius:8px;padding:9px 11px;font-weight:800;text-decoration:none;display:inline-block}
-    .action-secondary{background:#e2e8f0;color:#172033}
-    .action-danger{background:#fee2e2;color:#991b1b}
-    .empty,.error,.loading{background:#fff;border:1px dashed #cbd5e1;border-radius:8px;padding:16px;color:#64748b;line-height:1.6}
-    .error{border-color:#fecaca;color:#991b1b;background:#fff1f2}
-    .search-box{padding:12px}
-    .search-input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:12px;background:#fff}
+    .sector-grid{display:grid;grid-template-columns:1fr;gap:10px}
+    .sector-card{padding:14px;border-color:rgba(0,229,192,.18)}
+    .sector-code{font-size:11px;color:var(--teal);font-weight:900;text-transform:uppercase}
+    .sector-name{font-size:20px;font-weight:900;margin-top:4px}
+    .sector-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+    .sector-stat{border:1px solid var(--line-soft);border-radius:8px;padding:9px;background:rgba(255,255,255,.025)}
+    .sector-stat strong{display:block;font-size:20px;color:#fff}
+    .sector-stat span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
+    .list-card{padding:13px;margin-top:9px}
+    .list-card.alert{border-color:rgba(250,204,21,.36);background:linear-gradient(180deg,#1d1a10,#101820)}
+    .card-name{font-weight:900;margin-bottom:7px;color:#fff}
+    .card-meta{font-size:13px;color:var(--muted);line-height:1.65;word-break:break-word}
+    .card-meta b{color:var(--silver)}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
+    .action{border:0;border-radius:8px;padding:9px 11px;font-weight:900;text-decoration:none;display:inline-block}
+    .action-secondary{background:var(--teal-soft);color:#cffff7;border:1px solid rgba(0,229,192,.32)}
+    .action-danger{background:rgba(248,113,113,.12);color:#fecaca;border:1px solid rgba(248,113,113,.34)}
+    .empty,.error,.loading{
+      background:rgba(17,24,32,.72);
+      border:1px dashed rgba(148,163,184,.3);
+      border-radius:8px;
+      padding:16px;
+      color:var(--muted);
+      line-height:1.6;
+    }
+    .error{border-color:rgba(248,113,113,.5);color:#fecaca;background:rgba(127,29,29,.18)}
+    .loading{border-color:rgba(0,229,192,.32);color:#d9fffa}
+    .status-chip-wrap{display:flex;gap:8px;flex-wrap:wrap}
+    .status-chip{border:1px solid var(--line);background:rgba(255,255,255,.035);border-radius:8px;padding:9px 10px;color:var(--silver);font-size:13px}
+    .status-chip strong{color:#fff;margin-left:4px}
+    .status-chip.hot{border-color:rgba(0,229,192,.34);background:var(--teal-soft)}
+    .status-chip.warn{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.09)}
+    .search-box{padding:13px}
+    .search-input{
+      width:100%;
+      border:1px solid rgba(0,229,192,.28);
+      border-radius:8px;
+      padding:13px;
+      background:#080c11;
+      color:#fff;
+      outline:none;
+    }
+    .search-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,229,192,.11)}
     .search-results{margin-top:10px}
-    .result-btn{width:100%;text-align:left;border:0;background:#fff;border-top:1px solid #eef2f7;padding:12px 2px}
+    .result-btn{width:100%;text-align:left;border:0;border-top:1px solid var(--line-soft);background:transparent;color:#fff;padding:12px 2px}
     .result-btn:first-child{border-top:0}
-    .detail{margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px}
-    .muted{color:#64748b}
+    .detail{margin-top:10px;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:12px}
+    .muted{color:var(--muted)}
+
     @media (min-width:760px){
+      .shell{padding:24px}
       .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
       .split{grid-template-columns:1fr 1fr}
-      .shell{padding:24px}
+      .sector-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .title{font-size:32px}
     }
   </style>
 </head>
 <body>
   <main class="shell">
     <header class="topbar">
-      <div>
-        <div class="title">新晴揚 Boss 戰情中心</div>
+      <div class="topbar-content">
+        <div class="eyebrow">Operation Status Center</div>
+        <div class="title">新晴揚 BOSS PIT WALL</div>
+        <div class="subtitle">冷冽戰情儀表板｜營運、異常、座標與今日回報</div>
         <div class="sub">最後更新：<span id="generatedAt">尚未載入</span></div>
       </div>
       <button class="refresh" onclick="loadDashboard()">重新整理</button>
@@ -69,13 +185,28 @@
     </section>
 
     <section class="section" id="dashboard" style="display:none">
-      <h2 class="section-title">今日營運提醒</h2>
+      <div class="section-head">
+        <div>
+          <div class="section-kicker">Telemetry</div>
+          <h2 class="section-title">今日營運提醒</h2>
+        </div>
+      </div>
       <div class="grid" id="metricGrid"></div>
 
-      <h2 class="section-title section">業務分區狀況</h2>
-      <div class="panel" id="ownerSummary"></div>
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Sector Status</div>
+          <h2 class="section-title">業務分區狀況</h2>
+        </div>
+      </div>
+      <div class="sector-grid" id="ownerSummary"></div>
 
-      <h2 class="section-title section">待處理異常</h2>
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Exception Queue</div>
+          <h2 class="section-title">待處理異常</h2>
+        </div>
+      </div>
       <div class="split">
         <div class="panel">
           <h3 class="section-title">待補回報</h3>
@@ -87,13 +218,28 @@
         </div>
       </div>
 
-      <h2 class="section-title section">今日回報</h2>
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Radio Log</div>
+          <h2 class="section-title">今日回報</h2>
+        </div>
+      </div>
       <div class="panel" id="todayReports"></div>
 
-      <h2 class="section-title section">客戶狀態摘要</h2>
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Customer State</div>
+          <h2 class="section-title">客戶狀態摘要</h2>
+        </div>
+      </div>
       <div class="panel" id="customerStatusSummary"></div>
 
-      <h2 class="section-title section">客戶搜尋</h2>
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Lookup</div>
+          <h2 class="section-title">客戶快速搜尋</h2>
+        </div>
+      </div>
       <div class="search-box">
         <input class="search-input" id="customerSearch" placeholder="搜尋客戶名稱、電話、地址">
         <div class="search-results" id="searchResults"></div>
@@ -157,14 +303,18 @@
 
     function renderMetrics(summary){
       const items=[
-        ['今日回報',summary.todayReportCount||0],
-        ['待補回報',summary.pendingDraftCount||0],
-        ['待指定客戶',summary.unmatchedDraftCount||0],
-        ['已確認座標',summary.coordinateConfirmedCount||0]
+        {label:'今日回報',value:summary.todayReportCount||0,note:'正式業務回報'},
+        {label:'待補回報',value:summary.pendingDraftCount||0,note:'需要業務補內容'},
+        {label:'待指定客戶',value:summary.unmatchedDraftCount||0,note:'需要管理端判斷',warning:Number(summary.unmatchedDraftCount||0)>0},
+        {label:'已確認座標',value:summary.coordinateConfirmedCount||0,note:'可用於快速回報'}
       ];
 
       document.getElementById('metricGrid').innerHTML=items.map(function(item){
-        return '<div class="metric"><div class="metric-value">'+escapeHtml(item[1])+'</div><div class="metric-label">'+escapeHtml(item[0])+'</div></div>';
+        return '<div class="metric '+(item.warning?'warning':'')+'">'+
+          '<div class="metric-label">'+escapeHtml(item.label)+'</div>'+
+          '<div class="metric-value">'+escapeHtml(item.value)+'</div>'+
+          '<div class="metric-note">'+escapeHtml(item.note)+'</div>'+
+        '</div>';
       }).join('');
     }
 
@@ -174,10 +324,16 @@
         return;
       }
 
+      const codeMap={'溪南':'SOUTH SECTOR','溪北':'NORTH SECTOR','其他':'OTHER SECTOR'};
       document.getElementById('ownerSummary').innerHTML=rows.map(function(row){
-        return '<div class="owner-row">'+
-          '<div class="owner-name">'+escapeHtml(row.ownerName||'其他')+'</div>'+
-          '<div class="owner-meta">今日回報 '+num(row.todayReportCount)+'｜待補 '+num(row.pendingDraftCount)+'｜待指定 '+num(row.unmatchedDraftCount)+'</div>'+
+        return '<div class="sector-card">'+
+          '<div class="sector-code">'+escapeHtml(codeMap[row.ownerName]||'OTHER SECTOR')+'</div>'+
+          '<div class="sector-name">'+escapeHtml(row.ownerName||'其他')+'</div>'+
+          '<div class="sector-stats">'+
+            '<div class="sector-stat"><strong>'+num(row.todayReportCount)+'</strong><span>今日回報</span></div>'+
+            '<div class="sector-stat"><strong>'+num(row.pendingDraftCount)+'</strong><span>待補</span></div>'+
+            '<div class="sector-stat"><strong>'+num(row.unmatchedDraftCount)+'</strong><span>待指定</span></div>'+
+          '</div>'+
         '</div>';
       }).join('');
     }
@@ -186,28 +342,28 @@
       document.getElementById('pendingDrafts').innerHTML=rows.slice(0,10).map(function(row){
         return '<div class="list-card">'+
           '<div class="card-name">'+escapeHtml(row.customerName||'未指定客戶')+'</div>'+
-          '<div class="card-meta">業務：'+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
-          '建立時間：'+escapeHtml(row.createdAt||'')+'<br>'+
-          'GPS精準度：約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
-          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+          '<div class="card-meta"><b>Sector</b> '+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
+          '<b>建立時間</b> '+escapeHtml(row.createdAt||'')+'<br>'+
+          '<b>GPS 精準度</b> 約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
+          '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
         '</div>';
-      }).join('') || '<div class="empty">目前沒有待補回報。</div>';
+      }).join('') || '<div class="empty">目前沒有待補回報。Pit lane clear.</div>';
     }
 
     function renderUnmatchedDrafts(rows){
       document.getElementById('unmatchedDrafts').innerHTML=rows.slice(0,10).map(function(row){
-        return '<div class="list-card">'+
+        return '<div class="list-card alert">'+
           '<div class="card-name">'+escapeHtml(row.customerName||'找不到顧客')+'</div>'+
-          '<div class="card-meta">業務：'+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
-          '建立時間：'+escapeHtml(row.createdAt||'')+'<br>'+
-          'GPS精準度：約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
-          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+          '<div class="card-meta"><b>Sector</b> '+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
+          '<b>建立時間</b> '+escapeHtml(row.createdAt||'')+'<br>'+
+          '<b>GPS 精準度</b> 約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
+          '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
           '<div class="actions">'+
           (row.googleMapsUrl?'<a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(row.googleMapsUrl)+'">查看位置</a>':'')+
           '<button class="action action-danger" data-void-draft="'+escapeAttr(row.draftId||'')+'">作廢草稿</button>'+
           '</div>'+
         '</div>';
-      }).join('') || '<div class="empty">目前沒有待指定客戶。</div>';
+      }).join('') || '<div class="empty">目前沒有待指定客戶。No unresolved GPS marker.</div>';
 
       Array.prototype.forEach.call(document.querySelectorAll('[data-void-draft]'),function(btn){
         btn.addEventListener('click',function(){
@@ -220,19 +376,23 @@
       document.getElementById('todayReports').innerHTML=rows.slice(0,20).map(function(row){
         return '<div class="list-card">'+
           '<div class="card-name">'+escapeHtml(row.customerName||'未命名客戶')+'</div>'+
-          '<div class="card-meta">時間：'+escapeHtml(row.reportTime||'')+'<br>'+
-          '拜訪狀況：'+escapeHtml(row.visitStatus||'')+'<br>'+
-          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+          '<div class="card-meta"><b>時間</b> '+escapeHtml(row.reportTime||'')+'<br>'+
+          '<b>拜訪狀況</b> '+escapeHtml(row.visitStatus||'')+'<br>'+
+          '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
         '</div>';
-      }).join('') || '<div class="empty">今天尚無正式回報。</div>';
+      }).join('') || '<div class="empty">今天尚無正式回報。Radio silence.</div>';
     }
 
     function renderCustomerStatus(rows,extra){
-      const html=rows.map(function(row){
-        return '<div class="status-row"><div class="status-name">'+escapeHtml(row.status||'未分類')+'</div><div class="status-count">'+num(row.count)+'</div></div>';
-      }).join('')+
-      '<div class="status-row"><div class="status-name">被動維護</div><div class="status-count">'+num(extra.passiveMaintainCount)+'</div></div>'+
-      '<div class="status-row"><div class="status-name">隱藏首頁</div><div class="status-count">'+num(extra.hiddenHomeCount)+'</div></div>';
+      const html='<div class="status-chip-wrap">'+
+        rows.map(function(row){
+          const status=row.status||'未分類';
+          const chipClass=status==='重點經營'?'hot':(status==='停止經營'||status==='暫緩經營'?'warn':'');
+          return '<div class="status-chip '+chipClass+'">'+escapeHtml(status)+' <strong>'+num(row.count)+'</strong></div>';
+        }).join('')+
+        '<div class="status-chip warn">被動維護 <strong>'+num(extra.passiveMaintainCount)+'</strong></div>'+
+        '<div class="status-chip warn">隱藏首頁 <strong>'+num(extra.hiddenHomeCount)+'</strong></div>'+
+      '</div>';
 
       document.getElementById('customerStatusSummary').innerHTML=html || '<div class="empty">目前沒有客戶狀態資料。</div>';
     }
@@ -276,12 +436,12 @@
 
       document.getElementById('customerDetail').innerHTML='<div class="detail">'+
         '<div class="card-name">'+escapeHtml(c.customerName||'')+'</div>'+
-        '<div class="card-meta">電話：'+escapeHtml(c.phone||'無')+'<br>'+
-        '地址：'+escapeHtml(c.address||'無')+'<br>'+
-        '客戶狀態：'+escapeHtml(c.customerStatus||'未分類')+'<br>'+
-        '首頁/拜訪處理：'+escapeHtml(c.visitPolicy||'正常')+'<br>'+
-        '最後拜訪：'+escapeHtml(c.lastVisit||'無紀錄')+'<br>'+
-        '最後狀況：'+escapeHtml(c.lastStatus||'無')+'</div>'+
+        '<div class="card-meta"><b>電話</b> '+escapeHtml(c.phone||'無')+'<br>'+
+        '<b>地址</b> '+escapeHtml(c.address||'無')+'<br>'+
+        '<b>客戶狀態</b> '+escapeHtml(c.customerStatus||'未分類')+'<br>'+
+        '<b>首頁/拜訪處理</b> '+escapeHtml(c.visitPolicy||'正常')+'<br>'+
+        '<b>最後拜訪</b> '+escapeHtml(c.lastVisit||'無紀錄')+'<br>'+
+        '<b>最後狀況</b> '+escapeHtml(c.lastStatus||'無')+'</div>'+
       '</div>';
     }
 
