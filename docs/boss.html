@@ -39,7 +39,7 @@
     button,input{font:inherit}
     button{cursor:pointer}
 
-    .shell{width:100%;min-height:100vh;padding:14px;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+    .shell{width:100%;min-height:100vh;padding:12px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
     .topbar{
       position:relative;
       overflow:hidden;
@@ -47,7 +47,7 @@
       border-radius:8px;
       background:linear-gradient(135deg,#0c1117,#111923 62%,#08110f);
       box-shadow:var(--shadow);
-      padding:18px;
+      padding:14px 16px;
       display:flex;
       gap:14px;
       align-items:flex-start;
@@ -61,26 +61,27 @@
       pointer-events:none;
     }
     .topbar-content,.refresh{position:relative;z-index:1}
-    .eyebrow{font-size:11px;font-weight:800;color:var(--teal);text-transform:uppercase;letter-spacing:0;margin-bottom:7px}
-    .title{font-size:24px;font-weight:900;line-height:1.16;color:#fff}
-    .subtitle{font-size:13px;color:var(--silver);margin-top:6px}
-    .sub{font-size:12px;color:var(--muted);margin-top:8px}
+    .eyebrow{font-size:12px;font-weight:900;color:var(--teal);text-transform:uppercase;letter-spacing:0;margin-bottom:5px}
+    .title{font-size:23px;font-weight:900;line-height:1.12;color:#fff}
+    .subtitle{font-size:12px;color:var(--silver);margin-top:5px}
+    .sub{font-size:12px;color:var(--muted);margin-top:6px}
     .refresh{
       border:1px solid rgba(0,229,192,.45);
       background:rgba(0,229,192,.1);
       color:#eafffb;
       border-radius:8px;
-      padding:10px 12px;
+      min-height:44px;
+      padding:9px 12px;
       font-weight:900;
       white-space:nowrap;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
     }
 
-    .section{margin-top:18px}
-    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:10px}
+    .section{margin-top:14px}
+    .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px}
     .section-title{font-size:14px;font-weight:900;margin:0;color:#e8edf3;text-transform:uppercase}
-    .section-kicker{font-size:11px;color:var(--teal);font-weight:800;text-transform:uppercase}
-    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .section-kicker{font-size:12px;color:var(--teal);font-weight:900;text-transform:uppercase}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
     .metric,.panel,.list-card,.search-box,.sector-card{
       background:linear-gradient(180deg,var(--panel),#0d131a);
       border:1px solid var(--line);
@@ -88,50 +89,52 @@
       box-shadow:0 12px 28px rgba(0,0,0,.24);
     }
     .metric{
-      min-height:122px;
-      padding:14px;
+      min-height:102px;
+      padding:12px;
       position:relative;
       overflow:hidden;
     }
     .metric:after{
       content:"";
       position:absolute;
-      left:14px;
-      right:14px;
-      bottom:12px;
+      left:12px;
+      right:12px;
+      bottom:10px;
       height:2px;
       background:linear-gradient(90deg,var(--teal),transparent);
       opacity:.72;
     }
     .metric.warning{border-color:rgba(250,204,21,.55);background:linear-gradient(180deg,#1d1a10,#111820)}
     .metric.warning:after{background:linear-gradient(90deg,var(--yellow),transparent)}
-    .metric-label{font-size:12px;color:var(--muted);font-weight:800;text-transform:uppercase}
-    .metric-value{font-size:34px;font-weight:950;color:#fff;line-height:1;margin-top:12px}
-    .metric-note{font-size:12px;color:var(--silver);margin-top:9px}
-    .panel{padding:14px}
-    .split{display:grid;grid-template-columns:1fr;gap:12px}
-    .sector-grid{display:grid;grid-template-columns:1fr;gap:10px}
-    .sector-card{padding:14px;border-color:rgba(0,229,192,.18)}
+    .metric-label{font-size:12px;color:var(--muted);font-weight:900;text-transform:uppercase}
+    .metric-value{display:block;min-height:40px;font-size:42px;font-weight:950;color:#fff;line-height:.95;margin-top:8px;text-shadow:0 0 16px rgba(0,229,192,.14)}
+    .metric-note{font-size:12px;color:var(--silver);margin-top:6px}
+    .panel{padding:12px}
+    .split{display:grid;grid-template-columns:1fr;gap:10px}
+    .sector-grid{display:grid;grid-template-columns:1fr;gap:9px}
+    .sector-card{padding:12px;border-color:rgba(0,229,192,.18)}
     .sector-code{font-size:11px;color:var(--teal);font-weight:900;text-transform:uppercase}
-    .sector-name{font-size:20px;font-weight:900;margin-top:4px}
-    .sector-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
-    .sector-stat{border:1px solid var(--line-soft);border-radius:8px;padding:9px;background:rgba(255,255,255,.025)}
-    .sector-stat strong{display:block;font-size:20px;color:#fff}
+    .sector-name{font-size:18px;font-weight:900;margin-top:3px}
+    .sector-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
+    .sector-stat{border:1px solid var(--line-soft);border-radius:8px;padding:8px;background:rgba(255,255,255,.025)}
+    .sector-stat strong{display:block;font-size:19px;color:#fff}
     .sector-stat span{display:block;font-size:11px;color:var(--muted);margin-top:3px}
-    .list-card{padding:13px;margin-top:9px}
+    .list-card{padding:11px;margin-top:8px}
     .list-card.alert{border-color:rgba(250,204,21,.36);background:linear-gradient(180deg,#1d1a10,#101820)}
     .card-name{font-weight:900;margin-bottom:7px;color:#fff}
     .card-meta{font-size:13px;color:var(--muted);line-height:1.65;word-break:break-word}
     .card-meta b{color:var(--silver)}
+    .alert-badge{display:inline-block;margin-bottom:8px;border:1px solid rgba(250,204,21,.4);border-radius:8px;background:rgba(250,204,21,.1);color:#fde68a;padding:6px 8px;font-size:12px;font-weight:900}
+    .alert-caption{color:#fde68a;font-size:12px;margin-top:3px}
     .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:11px}
-    .action{border:0;border-radius:8px;padding:9px 11px;font-weight:900;text-decoration:none;display:inline-block}
+    .action{border:0;border-radius:8px;min-height:44px;padding:10px 12px;font-weight:900;text-decoration:none;display:inline-flex;align-items:center}
     .action-secondary{background:var(--teal-soft);color:#cffff7;border:1px solid rgba(0,229,192,.32)}
     .action-danger{background:rgba(248,113,113,.12);color:#fecaca;border:1px solid rgba(248,113,113,.34)}
     .empty,.error,.loading{
       background:rgba(17,24,32,.72);
       border:1px dashed rgba(148,163,184,.3);
       border-radius:8px;
-      padding:16px;
+      padding:12px;
       color:var(--muted);
       line-height:1.6;
     }
@@ -142,29 +145,53 @@
     .status-chip strong{color:#fff;margin-left:4px}
     .status-chip.hot{border-color:rgba(0,229,192,.34);background:var(--teal-soft)}
     .status-chip.warn{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.09)}
-    .search-box{padding:13px}
+    .search-box{padding:12px}
     .search-input{
       width:100%;
       border:1px solid rgba(0,229,192,.28);
       border-radius:8px;
-      padding:13px;
+      min-height:44px;
+      padding:12px;
       background:#080c11;
       color:#fff;
       outline:none;
     }
     .search-input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(0,229,192,.11)}
     .search-results{margin-top:10px}
-    .result-btn{width:100%;text-align:left;border:0;border-top:1px solid var(--line-soft);background:transparent;color:#fff;padding:12px 2px}
+    .result-btn{width:100%;min-height:44px;text-align:left;border:0;border-top:1px solid var(--line-soft);background:transparent;color:#fff;padding:10px 2px}
     .result-btn:first-child{border-top:0}
     .detail{margin-top:10px;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:12px}
     .muted{color:var(--muted)}
 
-    @media (min-width:760px){
-      .shell{padding:24px}
+    @media (min-width:769px){
+      .shell{padding:18px}
       .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
       .split{grid-template-columns:1fr 1fr}
       .sector-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
-      .title{font-size:32px}
+      .title{font-size:28px}
+      .topbar{padding:16px 18px}
+    }
+
+    @media (max-width:768px){
+      .shell{padding:10px;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
+      .topbar{padding:12px;gap:10px;align-items:flex-start}
+      .topbar-content{min-width:0}
+      .title{font-size:21px;line-height:1.16;word-break:keep-all}
+      .subtitle{font-size:12px;line-height:1.35}
+      .refresh{min-height:44px;padding:8px 10px}
+      .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .metric{min-height:106px;padding:11px}
+      .metric-value{font-size:38px;min-height:38px}
+      .sector-grid,.split{grid-template-columns:1fr}
+      .panel,.sector-card,.search-box{padding:11px}
+      .list-card{padding:11px}
+      .section{margin-top:13px}
+    }
+
+    @media (max-width:420px){
+      .topbar{flex-direction:column}
+      .refresh{width:100%}
+      .grid{grid-template-columns:1fr 1fr}
     }
   </style>
 </head>
@@ -187,7 +214,7 @@
     <section class="section" id="dashboard" style="display:none">
       <div class="section-head">
         <div>
-          <div class="section-kicker">Telemetry</div>
+          <div class="section-kicker">TELEMETRY｜今日營運</div>
           <h2 class="section-title">今日營運提醒</h2>
         </div>
       </div>
@@ -195,7 +222,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">Sector Status</div>
+          <div class="section-kicker">SECTOR STATUS｜業務分區</div>
           <h2 class="section-title">業務分區狀況</h2>
         </div>
       </div>
@@ -203,7 +230,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">Exception Queue</div>
+          <div class="section-kicker">EXCEPTION QUEUE｜待處理異常</div>
           <h2 class="section-title">待處理異常</h2>
         </div>
       </div>
@@ -220,7 +247,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">Radio Log</div>
+          <div class="section-kicker">TODAY REPORTS｜今日回報</div>
           <h2 class="section-title">今日回報</h2>
         </div>
       </div>
@@ -228,7 +255,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">Customer State</div>
+          <div class="section-kicker">CUSTOMER STATUS｜客戶狀態</div>
           <h2 class="section-title">客戶狀態摘要</h2>
         </div>
       </div>
@@ -236,7 +263,7 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">Lookup</div>
+          <div class="section-kicker">SEARCH CONSOLE｜客戶快速搜尋</div>
           <h2 class="section-title">客戶快速搜尋</h2>
         </div>
       </div>
@@ -303,16 +330,16 @@
 
     function renderMetrics(summary){
       const items=[
-        {label:'今日回報',value:summary.todayReportCount||0,note:'正式業務回報'},
-        {label:'待補回報',value:summary.pendingDraftCount||0,note:'需要業務補內容'},
-        {label:'待指定客戶',value:summary.unmatchedDraftCount||0,note:'需要管理端判斷',warning:Number(summary.unmatchedDraftCount||0)>0},
-        {label:'已確認座標',value:summary.coordinateConfirmedCount||0,note:'可用於快速回報'}
+        {label:'今日回報',value:toMetricNumber(summary.todayReportCount),note:'正式業務回報'},
+        {label:'待補回報',value:toMetricNumber(summary.pendingDraftCount),note:'需要業務補內容'},
+        {label:'待指定客戶',value:toMetricNumber(summary.unmatchedDraftCount),note:'需管理端處理',warning:toMetricNumber(summary.unmatchedDraftCount)>0},
+        {label:'已確認座標',value:toMetricNumber(summary.coordinateConfirmedCount),note:'可用於快速回報'}
       ];
 
       document.getElementById('metricGrid').innerHTML=items.map(function(item){
         return '<div class="metric '+(item.warning?'warning':'')+'">'+
           '<div class="metric-label">'+escapeHtml(item.label)+'</div>'+
-          '<div class="metric-value">'+escapeHtml(item.value)+'</div>'+
+          '<div class="metric-value">'+escapeHtml(formatMetricValue(item.value))+'</div>'+
           '<div class="metric-note">'+escapeHtml(item.note)+'</div>'+
         '</div>';
       }).join('');
@@ -353,7 +380,9 @@
     function renderUnmatchedDrafts(rows){
       document.getElementById('unmatchedDrafts').innerHTML=rows.slice(0,10).map(function(row){
         return '<div class="list-card alert">'+
+          '<div class="alert-badge">⚠ 需管理端指定客戶</div>'+
           '<div class="card-name">'+escapeHtml(row.customerName||'找不到顧客')+'</div>'+
+          '<div class="alert-caption">快速回報找不到對應客戶</div>'+
           '<div class="card-meta"><b>Sector</b> '+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
           '<b>建立時間</b> '+escapeHtml(row.createdAt||'')+'<br>'+
           '<b>GPS 精準度</b> 約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
@@ -363,7 +392,7 @@
           '<button class="action action-danger" data-void-draft="'+escapeAttr(row.draftId||'')+'">作廢草稿</button>'+
           '</div>'+
         '</div>';
-      }).join('') || '<div class="empty">目前沒有待指定客戶。No unresolved GPS marker.</div>';
+      }).join('') || '<div class="empty">目前沒有待指定客戶。</div>';
 
       Array.prototype.forEach.call(document.querySelectorAll('[data-void-draft]'),function(btn){
         btn.addEventListener('click',function(){
@@ -380,7 +409,7 @@
           '<b>拜訪狀況</b> '+escapeHtml(row.visitStatus||'')+'<br>'+
           '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
         '</div>';
-      }).join('') || '<div class="empty">今天尚無正式回報。Radio silence.</div>';
+      }).join('') || '<div class="empty">今天尚無正式回報。</div>';
     }
 
     function renderCustomerStatus(rows,extra){
@@ -522,6 +551,16 @@
     function formatAccuracy(value){
       const n=Number(value);
       return isFinite(n) ? Math.round(n)+' 公尺' : '未知';
+    }
+
+    function toMetricNumber(value){
+      const n=Number(value);
+      return isFinite(n) ? n : 0;
+    }
+
+    function formatMetricValue(value){
+      const n=toMetricNumber(value);
+      return String(n);
     }
 
     function num(value){
