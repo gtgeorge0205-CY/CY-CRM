@@ -145,6 +145,22 @@
     .status-chip strong{color:#fff;margin-left:4px}
     .status-chip.hot{border-color:rgba(0,229,192,.34);background:var(--teal-soft)}
     .status-chip.warn{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.09)}
+    .sales-summary{display:grid;gap:10px}
+    .sales-updated{font-size:13px;color:var(--silver);margin-bottom:10px}
+    .sales-status-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    .sales-chip{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.028);padding:10px;min-height:86px}
+    .sales-chip-name{font-size:12px;color:var(--teal);font-weight:900}
+    .sales-chip-count{font-size:22px;font-weight:950;color:#fff;margin-top:5px}
+    .sales-chip-meta{font-size:12px;color:var(--muted);line-height:1.5;margin-top:4px}
+    .analysis-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:10px}
+    .analysis-panel{border:1px solid var(--line-soft);border-radius:8px;background:rgba(7,12,18,.45);padding:10px;min-width:0}
+    .analysis-title{font-size:13px;font-weight:900;color:#fff;margin:0 0 8px}
+    .analysis-list{display:grid;gap:7px}
+    .analysis-item{border-top:1px solid var(--line-soft);padding-top:8px;font-size:13px;color:var(--silver);line-height:1.55}
+    .analysis-item:first-child{border-top:0;padding-top:0}
+    .analysis-item strong{color:#fff}
+    .analysis-tag{display:inline-block;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.1);border-radius:8px;padding:2px 6px;color:#cffff7;font-size:11px;font-weight:900;margin-right:5px}
+    .analysis-rank{display:inline-flex;align-items:center;justify-content:center;min-width:24px;height:24px;border-radius:8px;background:var(--teal-soft);color:#dffff9;font-weight:900;margin-right:7px}
     .search-box{padding:12px}
     .search-input{
       width:100%;
@@ -168,6 +184,7 @@
       .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
       .split{grid-template-columns:1fr 1fr}
       .sector-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .sales-summary{grid-template-columns:1fr}
       .title{font-size:28px}
       .topbar{padding:16px 18px}
     }
@@ -182,7 +199,8 @@
       .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .metric{min-height:106px;padding:11px}
       .metric-value{font-size:38px;min-height:38px}
-      .sector-grid,.split{grid-template-columns:1fr}
+      .sector-grid,.split,.analysis-grid{grid-template-columns:1fr}
+      .sales-status-grid{grid-template-columns:1fr 1fr}
       .panel,.sector-card,.search-box{padding:11px}
       .list-card{padding:11px}
       .section{margin-top:13px}
@@ -192,6 +210,7 @@
       .topbar{flex-direction:column}
       .refresh{width:100%}
       .grid{grid-template-columns:1fr 1fr}
+      .sales-status-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -222,14 +241,6 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">SECTOR STATUS｜業務分區</div>
-          <h2 class="section-title">業務分區狀況</h2>
-        </div>
-      </div>
-      <div class="sector-grid" id="ownerSummary"></div>
-
-      <div class="section-head section">
-        <div>
           <div class="section-kicker">EXCEPTION QUEUE｜待處理異常</div>
           <h2 class="section-title">待處理異常</h2>
         </div>
@@ -244,6 +255,22 @@
           <div id="unmatchedDrafts"></div>
         </div>
       </div>
+
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">銷貨分析</div>
+          <h2 class="section-title">銷貨分析摘要</h2>
+        </div>
+      </div>
+      <div class="panel" id="salesSummary"></div>
+
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">SECTOR STATUS｜業務分區</div>
+          <h2 class="section-title">業務分區狀況</h2>
+        </div>
+      </div>
+      <div class="sector-grid" id="ownerSummary"></div>
 
       <div class="section-head section">
         <div>
@@ -324,6 +351,7 @@
       renderOwnerSummary(data.ownerSummary||[]);
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
+      renderSalesSummary(data.salesSummary||{});
       renderTodayReports(data.todayReports||[]);
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
     }
@@ -424,6 +452,116 @@
       '</div>';
 
       document.getElementById('customerStatusSummary').innerHTML=html || '<div class="empty">目前沒有客戶狀態資料。</div>';
+    }
+
+    function renderSalesSummary(summary){
+      const target=document.getElementById('salesSummary');
+
+      try{
+        summary=summary||{};
+        const statusStats=Array.isArray(summary.statusStats)?summary.statusStats:[];
+        const alerts=Array.isArray(summary.alerts)?summary.alerts:[];
+        const topProfitCustomers=Array.isArray(summary.topProfitCustomers)?summary.topProfitCustomers:[];
+        const decliningCustomers=Array.isArray(summary.decliningCustomers)?summary.decliningCustomers:[];
+
+        if(summary.message && !statusStats.length && !alerts.length && !topProfitCustomers.length && !decliningCustomers.length){
+          console.log('boss sales summary missing',summary.message);
+          target.innerHTML='<div class="empty">尚未讀取到銷貨分析摘要</div>';
+          return;
+        }
+
+        console.log('boss sales summary loaded');
+        target.innerHTML=
+          '<div class="sales-updated">銷貨分析更新：'+escapeHtml(summary.updatedAt||'尚未讀取到銷貨分析摘要')+'</div>'+
+          '<div class="sales-summary">'+
+            '<div class="analysis-panel">'+
+              '<h3 class="analysis-title">經營狀態</h3>'+
+              renderSalesStatusStats(statusStats)+
+            '</div>'+
+            '<div class="analysis-grid">'+
+              '<div class="analysis-panel">'+
+                '<h3 class="analysis-title">重點警示</h3>'+
+                renderSalesAlerts(alerts.slice(0,10))+
+              '</div>'+
+              '<div class="analysis-panel">'+
+                '<h3 class="analysis-title">毛利前10</h3>'+
+                renderTopProfitCustomers(topProfitCustomers.slice(0,10))+
+              '</div>'+
+            '</div>'+
+            '<div class="analysis-panel">'+
+              '<h3 class="analysis-title">觀察中 / 下滑客戶</h3>'+
+              renderDecliningCustomers(decliningCustomers.slice(0,10))+
+            '</div>'+
+          '</div>';
+      }catch(err){
+        console.log('boss sales summary render error',err.message);
+        target.innerHTML='<div class="error">銷貨分析摘要渲染失敗：'+escapeHtml(err.message)+'</div>';
+      }
+    }
+
+    function renderSalesStatusStats(rows){
+      if(!rows.length){
+        return '<div class="empty">尚未讀取到經營狀態統計。</div>';
+      }
+
+      const order=['重點經營','觀察中','待開發','穩定維護','暫緩經營','停止經營'];
+      const map={};
+      rows.forEach(function(row){
+        map[row.status]=row;
+      });
+
+      return '<div class="sales-status-grid">'+order.map(function(status){
+        const row=map[status]||{status:status,customerCount:0,totalGrossProfit:0,grossProfit90d:0};
+        return '<div class="sales-chip">'+
+          '<div class="sales-chip-name">'+escapeHtml(status)+'</div>'+
+          '<div class="sales-chip-count">'+num(row.customerCount)+'</div>'+
+          '<div class="sales-chip-meta">總毛利 '+formatMoney(row.totalGrossProfit)+'<br>近90天 '+formatMoney(row.grossProfit90d)+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function renderSalesAlerts(rows){
+      if(!rows.length){
+        return '<div class="empty">目前沒有重點警示。</div>';
+      }
+
+      return '<div class="analysis-list">'+rows.map(function(row){
+        return '<div class="analysis-item">'+
+          '<span class="analysis-tag">'+escapeHtml(row.alertType||'警示')+'</span>'+
+          '<strong>'+escapeHtml(row.customerName||'未命名客戶')+'</strong>｜'+escapeHtml(row.customerStatus||'未分類')+'<br>'+
+          '近90天毛利 '+formatMoney(row.grossProfit90d)+'｜最後交易 '+escapeHtml(row.lastTradeDate||'無')+'<br>'+
+          '<span class="muted">'+escapeHtml(row.reason||'無建議理由')+'</span>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function renderTopProfitCustomers(rows){
+      if(!rows.length){
+        return '<div class="empty">目前沒有毛利前10資料。</div>';
+      }
+
+      return '<div class="analysis-list">'+rows.map(function(row){
+        return '<div class="analysis-item">'+
+          '<span class="analysis-rank">'+escapeHtml(row.rank||'')+'</span>'+
+          '<strong>'+escapeHtml(row.customerName||'未命名客戶')+'</strong><br>'+
+          '總毛利 '+formatMoney(row.totalGrossProfit)+'｜毛利率 '+formatPercent(row.grossProfitRate)+'<br>'+
+          '<span class="muted">近90天毛利 '+formatMoney(row.grossProfit90d)+'</span>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function renderDecliningCustomers(rows){
+      if(!rows.length){
+        return '<div class="empty">目前沒有觀察中 / 下滑客戶資料。</div>';
+      }
+
+      return '<div class="analysis-list">'+rows.map(function(row){
+        return '<div class="analysis-item">'+
+          '<strong>'+escapeHtml(row.customerName||'未命名客戶')+'</strong>｜'+escapeHtml(row.customerStatus||'未分類')+'<br>'+
+          '銷售成長率 '+formatPercent(row.salesGrowthRate)+'｜毛利成長率 '+formatPercent(row.grossProfitGrowthRate)+'<br>'+
+          '<span class="muted">'+escapeHtml(row.reason||'無建議理由')+'</span>'+
+        '</div>';
+      }).join('')+'</div>';
     }
 
     function renderCustomerSearch(){
@@ -566,6 +704,26 @@
     function num(value){
       const n=Number(value||0);
       return isFinite(n) ? n : 0;
+    }
+
+    function formatMoney(value){
+      const n=Number(value||0);
+
+      if(!isFinite(n)){
+        return '0';
+      }
+
+      return Math.round(n).toLocaleString('zh-TW');
+    }
+
+    function formatPercent(value){
+      const n=Number(value);
+
+      if(!isFinite(n)){
+        return '0.0%';
+      }
+
+      return (n*100).toFixed(1)+'%';
     }
 
     function escapeHtml(text){
