@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>新晴揚 Boss 戰情中心</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="./icons/icon-32.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/icon-180.png">
+  <meta name="apple-mobile-web-app-title" content="新晴揚Boss">
+  <meta name="theme-color" content="#0f172a">
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;min-height:100%;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Arial,sans-serif;background:#f4f6fb;color:#172033}
+    body{overflow-x:hidden}
+    button,input{font:inherit}
+    .shell{width:100%;min-height:100vh;padding:16px;padding-bottom:calc(28px + env(safe-area-inset-bottom))}
+    .topbar{background:#0f172a;color:#fff;border-radius:8px;padding:18px 16px;display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+    .title{font-size:22px;font-weight:800;line-height:1.25}
+    .sub{font-size:13px;color:#cbd5e1;margin-top:6px}
+    .refresh{border:0;background:#fff;color:#0f172a;border-radius:8px;padding:10px 12px;font-weight:700;white-space:nowrap}
+    .section{margin-top:16px}
+    .section-title{font-size:16px;font-weight:800;margin:0 0 10px}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .metric,.panel,.list-card,.search-box{background:#fff;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 1px 2px rgba(15,23,42,.05)}
+    .metric{padding:14px}
+    .metric-value{font-size:28px;font-weight:900;letter-spacing:0;color:#0f172a}
+    .metric-label{font-size:13px;color:#64748b;margin-top:3px}
+    .panel{padding:14px}
+    .owner-row,.status-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid #eef2f7}
+    .owner-row:first-child,.status-row:first-child{border-top:0}
+    .owner-name,.status-name{font-weight:800}
+    .owner-meta,.status-count{font-size:13px;color:#475569;text-align:right;line-height:1.6}
+    .split{display:grid;grid-template-columns:1fr;gap:12px}
+    .list-card{padding:12px;margin-top:8px}
+    .card-name{font-weight:800;margin-bottom:6px}
+    .card-meta{font-size:13px;color:#475569;line-height:1.6;word-break:break-word}
+    .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .action{border:0;border-radius:8px;padding:9px 11px;font-weight:800;text-decoration:none;display:inline-block}
+    .action-secondary{background:#e2e8f0;color:#172033}
+    .action-danger{background:#fee2e2;color:#991b1b}
+    .empty,.error,.loading{background:#fff;border:1px dashed #cbd5e1;border-radius:8px;padding:16px;color:#64748b;line-height:1.6}
+    .error{border-color:#fecaca;color:#991b1b;background:#fff1f2}
+    .search-box{padding:12px}
+    .search-input{width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:12px;background:#fff}
+    .search-results{margin-top:10px}
+    .result-btn{width:100%;text-align:left;border:0;background:#fff;border-top:1px solid #eef2f7;padding:12px 2px}
+    .result-btn:first-child{border-top:0}
+    .detail{margin-top:10px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px}
+    .muted{color:#64748b}
+    @media (min-width:760px){
+      .grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .split{grid-template-columns:1fr 1fr}
+      .shell{padding:24px}
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div>
+        <div class="title">新晴揚 Boss 戰情中心</div>
+        <div class="sub">最後更新：<span id="generatedAt">尚未載入</span></div>
+      </div>
+      <button class="refresh" onclick="loadDashboard()">重新整理</button>
+    </header>
+
+    <section class="section" id="messageArea">
+      <div class="loading">載入 Boss 戰情資料中...</div>
+    </section>
+
+    <section class="section" id="dashboard" style="display:none">
+      <h2 class="section-title">今日營運提醒</h2>
+      <div class="grid" id="metricGrid"></div>
+
+      <h2 class="section-title section">業務分區狀況</h2>
+      <div class="panel" id="ownerSummary"></div>
+
+      <h2 class="section-title section">待處理異常</h2>
+      <div class="split">
+        <div class="panel">
+          <h3 class="section-title">待補回報</h3>
+          <div id="pendingDrafts"></div>
+        </div>
+        <div class="panel">
+          <h3 class="section-title">待指定客戶</h3>
+          <div id="unmatchedDrafts"></div>
+        </div>
+      </div>
+
+      <h2 class="section-title section">今日回報</h2>
+      <div class="panel" id="todayReports"></div>
+
+      <h2 class="section-title section">客戶狀態摘要</h2>
+      <div class="panel" id="customerStatusSummary"></div>
+
+      <h2 class="section-title section">客戶搜尋</h2>
+      <div class="search-box">
+        <input class="search-input" id="customerSearch" placeholder="搜尋客戶名稱、電話、地址">
+        <div class="search-results" id="searchResults"></div>
+        <div id="customerDetail"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API_BASE='https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
+    const API_TOKEN='CYCRM_2026_write_test';
+    const JSONP_TIMEOUT_MS=20000;
+    let dashboardData=null;
+    let customers=[];
+
+    document.getElementById('customerSearch').addEventListener('input',renderCustomerSearch);
+    loadDashboard();
+    loadCustomers();
+
+    function loadDashboard(){
+      console.log('boss dashboard loading');
+      setMessage('<div class="loading">載入 Boss 戰情資料中...</div>');
+      document.getElementById('dashboard').style.display='none';
+
+      jsonp({
+        action:'getBossDashboard',
+        token:API_TOKEN
+      }).then(function(data){
+        console.log('boss dashboard loaded');
+        dashboardData=data||{};
+        renderDashboard(dashboardData);
+      }).catch(function(err){
+        console.log('boss dashboard error',err.message);
+        setMessage('<div class="error">Boss 戰情資料載入失敗<br>'+escapeHtml(err.message)+'<br><button class="action action-secondary" style="margin-top:10px" onclick="loadDashboard()">重試</button></div>');
+      });
+    }
+
+    function loadCustomers(){
+      jsonp({
+        action:'getCustomers',
+        mode:'boss'
+      }).then(function(data){
+        customers=Array.isArray(data)?data:[];
+        renderCustomerSearch();
+      }).catch(function(err){
+        document.getElementById('searchResults').innerHTML='<div class="empty">客戶資料載入失敗：'+escapeHtml(err.message)+'</div>';
+      });
+    }
+
+    function renderDashboard(data){
+      document.getElementById('dashboard').style.display='block';
+      setMessage('');
+      document.getElementById('generatedAt').textContent=data.generatedAt||'';
+      renderMetrics(data.operationSummary||{});
+      renderOwnerSummary(data.ownerSummary||[]);
+      renderPendingDrafts(data.pendingDrafts||[]);
+      renderUnmatchedDrafts(data.unmatchedDrafts||[]);
+      renderTodayReports(data.todayReports||[]);
+      renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
+    }
+
+    function renderMetrics(summary){
+      const items=[
+        ['今日回報',summary.todayReportCount||0],
+        ['待補回報',summary.pendingDraftCount||0],
+        ['待指定客戶',summary.unmatchedDraftCount||0],
+        ['已確認座標',summary.coordinateConfirmedCount||0]
+      ];
+
+      document.getElementById('metricGrid').innerHTML=items.map(function(item){
+        return '<div class="metric"><div class="metric-value">'+escapeHtml(item[1])+'</div><div class="metric-label">'+escapeHtml(item[0])+'</div></div>';
+      }).join('');
+    }
+
+    function renderOwnerSummary(rows){
+      if(!rows.length){
+        document.getElementById('ownerSummary').innerHTML='<div class="empty">目前沒有分區資料。</div>';
+        return;
+      }
+
+      document.getElementById('ownerSummary').innerHTML=rows.map(function(row){
+        return '<div class="owner-row">'+
+          '<div class="owner-name">'+escapeHtml(row.ownerName||'其他')+'</div>'+
+          '<div class="owner-meta">今日回報 '+num(row.todayReportCount)+'｜待補 '+num(row.pendingDraftCount)+'｜待指定 '+num(row.unmatchedDraftCount)+'</div>'+
+        '</div>';
+      }).join('');
+    }
+
+    function renderPendingDrafts(rows){
+      document.getElementById('pendingDrafts').innerHTML=rows.slice(0,10).map(function(row){
+        return '<div class="list-card">'+
+          '<div class="card-name">'+escapeHtml(row.customerName||'未指定客戶')+'</div>'+
+          '<div class="card-meta">業務：'+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
+          '建立時間：'+escapeHtml(row.createdAt||'')+'<br>'+
+          'GPS精準度：約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
+          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+        '</div>';
+      }).join('') || '<div class="empty">目前沒有待補回報。</div>';
+    }
+
+    function renderUnmatchedDrafts(rows){
+      document.getElementById('unmatchedDrafts').innerHTML=rows.slice(0,10).map(function(row){
+        return '<div class="list-card">'+
+          '<div class="card-name">'+escapeHtml(row.customerName||'找不到顧客')+'</div>'+
+          '<div class="card-meta">業務：'+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
+          '建立時間：'+escapeHtml(row.createdAt||'')+'<br>'+
+          'GPS精準度：約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
+          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+          '<div class="actions">'+
+          (row.googleMapsUrl?'<a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(row.googleMapsUrl)+'">查看位置</a>':'')+
+          '<button class="action action-danger" data-void-draft="'+escapeAttr(row.draftId||'')+'">作廢草稿</button>'+
+          '</div>'+
+        '</div>';
+      }).join('') || '<div class="empty">目前沒有待指定客戶。</div>';
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-void-draft]'),function(btn){
+        btn.addEventListener('click',function(){
+          voidUnmatchedDraft(btn.getAttribute('data-void-draft'));
+        });
+      });
+    }
+
+    function renderTodayReports(rows){
+      document.getElementById('todayReports').innerHTML=rows.slice(0,20).map(function(row){
+        return '<div class="list-card">'+
+          '<div class="card-name">'+escapeHtml(row.customerName||'未命名客戶')+'</div>'+
+          '<div class="card-meta">時間：'+escapeHtml(row.reportTime||'')+'<br>'+
+          '拜訪狀況：'+escapeHtml(row.visitStatus||'')+'<br>'+
+          '備註：'+escapeHtml(row.note||'無')+'</div>'+
+        '</div>';
+      }).join('') || '<div class="empty">今天尚無正式回報。</div>';
+    }
+
+    function renderCustomerStatus(rows,extra){
+      const html=rows.map(function(row){
+        return '<div class="status-row"><div class="status-name">'+escapeHtml(row.status||'未分類')+'</div><div class="status-count">'+num(row.count)+'</div></div>';
+      }).join('')+
+      '<div class="status-row"><div class="status-name">被動維護</div><div class="status-count">'+num(extra.passiveMaintainCount)+'</div></div>'+
+      '<div class="status-row"><div class="status-name">隱藏首頁</div><div class="status-count">'+num(extra.hiddenHomeCount)+'</div></div>';
+
+      document.getElementById('customerStatusSummary').innerHTML=html || '<div class="empty">目前沒有客戶狀態資料。</div>';
+    }
+
+    function renderCustomerSearch(){
+      const keyword=document.getElementById('customerSearch').value.trim().toLowerCase();
+      const results=document.getElementById('searchResults');
+
+      if(!keyword){
+        results.innerHTML='<div class="empty">輸入關鍵字搜尋客戶。</div>';
+        return;
+      }
+
+      const matched=customers.filter(function(c){
+        return [
+          c.customerCode,
+          c.customerName,
+          c.phone,
+          c.address,
+          c.customerStatus,
+          c.lastStatus,
+          c.searchText
+        ].join(' ').toLowerCase().indexOf(keyword)!==-1;
+      }).slice(0,30);
+
+      results.innerHTML=matched.map(function(c,index){
+        return '<button class="result-btn" data-customer-index="'+index+'"><strong>'+escapeHtml(c.customerName||'')+'</strong><br><span class="muted">'+escapeHtml(c.phone||'無電話')+'｜'+escapeHtml(c.customerStatus||'未分類')+'</span></button>';
+      }).join('') || '<div class="empty">找不到符合的客戶。</div>';
+
+      Array.prototype.forEach.call(results.querySelectorAll('[data-customer-index]'),function(btn){
+        btn.addEventListener('click',function(){
+          showCustomerDetail(matched[Number(btn.getAttribute('data-customer-index'))]);
+        });
+      });
+    }
+
+    function showCustomerDetail(c){
+      if(!c){
+        return;
+      }
+
+      document.getElementById('customerDetail').innerHTML='<div class="detail">'+
+        '<div class="card-name">'+escapeHtml(c.customerName||'')+'</div>'+
+        '<div class="card-meta">電話：'+escapeHtml(c.phone||'無')+'<br>'+
+        '地址：'+escapeHtml(c.address||'無')+'<br>'+
+        '客戶狀態：'+escapeHtml(c.customerStatus||'未分類')+'<br>'+
+        '首頁/拜訪處理：'+escapeHtml(c.visitPolicy||'正常')+'<br>'+
+        '最後拜訪：'+escapeHtml(c.lastVisit||'無紀錄')+'<br>'+
+        '最後狀況：'+escapeHtml(c.lastStatus||'無')+'</div>'+
+      '</div>';
+    }
+
+    function voidUnmatchedDraft(draftId){
+      if(!draftId){
+        return;
+      }
+
+      if(!confirm('確定作廢這筆待指定客戶草稿？')){
+        return;
+      }
+
+      const reason=prompt('請輸入作廢原因','Boss 作廢待指定客戶')||'Boss 作廢待指定客戶';
+
+      jsonp({
+        action:'voidVisitDraft',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          draftId:draftId,
+          reason:reason
+        })
+      }).then(function(){
+        console.log('void unmatched draft success',draftId);
+        loadDashboard();
+      }).catch(function(err){
+        console.log('void unmatched draft failed',err.message);
+        alert('作廢失敗：'+err.message);
+      });
+    }
+
+    function jsonp(params){
+      return new Promise(function(resolve,reject){
+        const callback='boss_jsonp_'+Date.now()+'_'+Math.floor(Math.random()*100000);
+        const timer=setTimeout(function(){
+          cleanup();
+          reject(new Error('API 載入逾時'));
+        },JSONP_TIMEOUT_MS);
+
+        function cleanup(){
+          clearTimeout(timer);
+          delete window[callback];
+          if(script.parentNode){
+            script.parentNode.removeChild(script);
+          }
+        }
+
+        params.callback=callback;
+        window[callback]=function(payload){
+          cleanup();
+
+          if(!payload || payload.ok===false){
+            reject(new Error(payload && payload.error ? payload.error : 'API 回傳失敗'));
+            return;
+          }
+
+          resolve(payload.data);
+        };
+
+        const query=Object.keys(params).map(function(key){
+          return encodeURIComponent(key)+'='+encodeURIComponent(params[key]);
+        }).join('&');
+        const script=document.createElement('script');
+
+        script.onerror=function(){
+          cleanup();
+          reject(new Error('API 連線失敗'));
+        };
+        script.src=API_BASE+'?'+query;
+        document.body.appendChild(script);
+      });
+    }
+
+    function setMessage(html){
+      document.getElementById('messageArea').innerHTML=html||'';
+      document.getElementById('messageArea').style.display=html?'block':'none';
+    }
+
+    function formatAccuracy(value){
+      const n=Number(value);
+      return isFinite(n) ? Math.round(n)+' 公尺' : '未知';
+    }
+
+    function num(value){
+      const n=Number(value||0);
+      return isFinite(n) ? n : 0;
+    }
+
+    function escapeHtml(text){
+      return String(text||'')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#039;');
+    }
+
+    function escapeAttr(text){
+      return escapeHtml(text);
+    }
+  </script>
+</body>
+</html>
