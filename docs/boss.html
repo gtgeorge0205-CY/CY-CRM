@@ -36,7 +36,7 @@
         radial-gradient(circle at 75% 0%,rgba(148,163,184,.12),transparent 34%),
         var(--bg);
     }
-    button,input{font:inherit}
+    button,input,textarea,select{font:inherit}
     button{cursor:pointer}
 
     .shell{width:100%;min-height:100vh;padding:12px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
@@ -187,11 +187,32 @@
     .owner-counts{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 10px}
     .owner-pill{border:1px solid rgba(0,229,192,.22);background:rgba(0,229,192,.08);border-radius:8px;padding:7px 9px;color:#dffff9;font-size:12px;font-weight:900}
     .report-card{border-top:1px solid var(--line-soft);padding:10px 0;line-height:1.58}
+    .report-card.reply-a{border-left:4px solid var(--yellow);padding-left:10px;background:rgba(250,204,21,.045)}
     .report-card:first-child{border-top:0}
     .report-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;color:#fff;font-weight:900}
     .report-type{border:1px solid rgba(0,229,192,.25);background:rgba(0,229,192,.08);border-radius:8px;padding:2px 6px;color:#dffff9;font-size:11px;white-space:nowrap}
     .report-meta{font-size:12px;color:var(--muted);margin-top:4px}
     .report-content{font-size:13px;color:var(--silver);margin-top:6px;white-space:pre-wrap;word-break:break-word}
+    .reply-state{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+    .reply-chip{display:inline-flex;align-items:center;border:1px solid var(--line-soft);border-radius:8px;padding:4px 7px;background:rgba(255,255,255,.028);color:var(--silver);font-size:12px;font-weight:900}
+    .reply-chip.hot{border-color:rgba(250,204,21,.38);background:rgba(250,204,21,.1);color:#fde68a}
+    .reply-chip.done{border-color:rgba(0,229,192,.32);background:rgba(0,229,192,.09);color:#dffff9}
+    .thread-modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.68)}
+    .thread-modal.show{display:flex}
+    .thread-panel{width:min(860px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(0,229,192,.25);border-radius:10px;background:#0b1118;box-shadow:var(--shadow);padding:14px}
+    .thread-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .thread-title{font-size:18px;font-weight:950;color:#fff}
+    .thread-close{border:1px solid var(--line);background:rgba(255,255,255,.04);color:#fff;border-radius:8px;min-width:42px;min-height:42px;font-weight:900}
+    .thread-block{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.025);padding:11px;margin-top:10px}
+    .thread-label{font-size:12px;color:var(--teal);font-weight:900;margin-bottom:7px}
+    .reply-list{display:grid;gap:8px}
+    .reply-item{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
+    .reply-form{display:grid;gap:9px}
+    .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+    .form-control{width:100%;border:1px solid rgba(0,229,192,.24);border-radius:8px;background:#080c11;color:#fff;min-height:44px;padding:10px;outline:none}
+    textarea.form-control{min-height:112px;resize:vertical}
+    .history-results{display:grid;gap:8px;margin-top:10px}
+    .history-card{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
     .toggle-btn{width:100%;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.08);color:#dffff9;border-radius:8px;min-height:44px;padding:9px 12px;font-weight:900;margin-top:10px}
     .search-box{padding:12px}
     .search-input{
@@ -244,6 +265,9 @@
       .action-signal-wrap{grid-template-columns:1fr}
       .signal-title{font-size:19px}
       .signal-head{align-items:flex-start}
+      .form-row{grid-template-columns:1fr}
+      .thread-modal{align-items:flex-end;padding:8px}
+      .thread-panel{max-height:94vh;padding:12px}
       .action-signal-card{padding:10px}
       .panel,.sector-card,.search-box{padding:11px}
       .list-card{padding:11px}
@@ -326,6 +350,20 @@
 
       <div class="section-head section">
         <div>
+          <div class="section-kicker">客戶回報歷史</div>
+          <h2 class="section-title">客戶回報歷史查詢</h2>
+        </div>
+      </div>
+      <div class="search-box">
+        <input class="search-input" id="reportHistorySearch" placeholder="輸入客戶名稱或客戶編號">
+        <div class="actions">
+          <button class="action action-secondary" id="reportHistorySearchBtn">查詢</button>
+        </div>
+        <div class="history-results" id="reportHistoryResults"></div>
+      </div>
+
+      <div class="section-head section">
+        <div>
           <div class="section-kicker">客戶狀態</div>
           <h2 class="section-title">客戶狀態摘要</h2>
         </div>
@@ -346,6 +384,19 @@
     </section>
   </main>
 
+  <div class="thread-modal" id="reportThreadModal" aria-hidden="true">
+    <div class="thread-panel">
+      <div class="thread-head">
+        <div>
+          <div class="section-kicker">業務回報討論串</div>
+          <div class="thread-title" id="threadTitle">查看 / 回覆</div>
+        </div>
+        <button class="thread-close" onclick="closeReportThread()">×</button>
+      </div>
+      <div id="threadBody"><div class="loading">載入回報內容中...</div></div>
+    </div>
+  </div>
+
   <script>
     const API_BASE='https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
     const API_TOKEN='CYCRM_2026_write_test';
@@ -354,8 +405,15 @@
     let customers=[];
     let reportExpanded=false;
     let actionSignalsExpanded=false;
+    let activeReportThread=null;
 
     document.getElementById('customerSearch').addEventListener('input',renderCustomerSearch);
+    document.getElementById('reportHistorySearchBtn').addEventListener('click',queryReportHistory);
+    document.getElementById('reportHistorySearch').addEventListener('keydown',function(event){
+      if(event.key==='Enter'){
+        queryReportHistory();
+      }
+    });
     loadDashboard();
     loadCustomers();
 
@@ -507,6 +565,8 @@
           (reports.length
             ? '<div>'+shown.map(renderReportCard).join('')+'</div>'+toggle
             : '<div class="empty">近兩日尚無業務回報。</div>');
+
+        bindReportThreadButtons(target);
       }catch(err){
         console.log('boss recent report detail render error',err.message);
         target.innerHTML='<div class="error">業務回報追蹤渲染失敗：'+escapeHtml(err.message)+'</div>';
@@ -525,8 +585,18 @@
 
     function renderReportCard(row){
       const mapsUrl=row.googleMapsUrl || (row.lat&&row.lng?'https://www.google.com/maps?q='+encodeURIComponent(row.lat+','+row.lng):'');
+      const hasReply=!!row.hasBossReply;
+      const importance=String(row.latestBossImportance||'').toUpperCase();
+      const cardClass=importance==='A'?' report-card reply-a':' report-card';
+      const replyState=hasReply
+        ? '<div class="reply-state">'+
+            '<span class="reply-chip done">'+escapeHtml(row.latestBossStatus||'已回覆')+'</span>'+
+            (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
+            '<span class="reply-chip">最近回覆 '+escapeHtml(row.latestBossReplyTime||'')+'</span>'+
+          '</div>'
+        : '<div class="reply-state"><span class="reply-chip">尚未回覆</span></div>';
 
-      return '<div class="report-card">'+
+      return '<div class="'+cardClass.trim()+'">'+
         '<div class="report-title">'+
           '<span>'+escapeHtml(row.customerName||'未命名客戶')+'</span>'+
           '<span class="report-type">'+escapeHtml(row.reportType||row.status||'回報')+'</span>'+
@@ -534,8 +604,20 @@
         '<div class="report-meta">'+escapeHtml(row.timestamp||row.date||'')+'｜'+escapeHtml(row.owner||'未指定')+'</div>'+
         '<div class="report-content">'+escapeHtml(row.content||row.note||'無回報內容')+'</div>'+
         (row.status?'<div class="report-meta">狀態：'+escapeHtml(row.status)+'</div>':'')+
-        (mapsUrl?'<div class="actions"><a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a></div>':'')+
+        replyState+
+        '<div class="actions">'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
+          (mapsUrl?'<a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a>':'')+
+        '</div>'+
       '</div>';
+    }
+
+    function bindReportThreadButtons(container){
+      Array.prototype.forEach.call(container.querySelectorAll('[data-report-thread]'),function(btn){
+        btn.addEventListener('click',function(){
+          openReportThread(btn.getAttribute('data-report-thread'));
+        });
+      });
     }
 
     function toggleReportDetails(){
@@ -774,6 +856,215 @@
         '<b>最後拜訪</b> '+escapeHtml(c.lastVisit||'無紀錄')+'<br>'+
         '<b>最後狀況</b> '+escapeHtml(c.lastStatus||'無')+'</div>'+
       '</div>';
+    }
+
+    function openReportThread(reportId){
+      if(!reportId){
+        alert('這筆回報缺少回報ID，請重新整理後再試。');
+        return;
+      }
+
+      const modal=document.getElementById('reportThreadModal');
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden','false');
+      document.getElementById('threadTitle').textContent='查看 / 回覆';
+      document.getElementById('threadBody').innerHTML='<div class="loading">載入回報內容中...</div>';
+
+      jsonp({
+        action:'getBossReportThread',
+        token:API_TOKEN,
+        reportId:reportId
+      }).then(function(data){
+        activeReportThread=data||{};
+        renderReportThread(activeReportThread);
+      }).catch(function(err){
+        document.getElementById('threadBody').innerHTML='<div class="error">討論串載入失敗：'+escapeHtml(err.message)+'</div>';
+      });
+    }
+
+    function closeReportThread(){
+      const modal=document.getElementById('reportThreadModal');
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden','true');
+      activeReportThread=null;
+    }
+
+    function renderReportThread(data,message){
+      const report=(data&&data.report)||{};
+      const replies=Array.isArray(data&&data.replies)?data.replies:[];
+      const mapsUrl=report.googleMapsUrl || (report.lat&&report.lng?'https://www.google.com/maps?q='+encodeURIComponent(report.lat+','+report.lng):'');
+
+      document.getElementById('threadTitle').textContent=report.customerName||'業務回報';
+      document.getElementById('threadBody').innerHTML=
+        (message?'<div class="loading">'+escapeHtml(message)+'</div>':'')+
+        '<div class="thread-block">'+
+          '<div class="thread-label">原始業務回報</div>'+
+          '<div class="card-name">'+escapeHtml(report.customerName||'未命名客戶')+'</div>'+
+          '<div class="card-meta">'+
+            '<b>回報時間</b> '+escapeHtml(report.timestamp||report.reportTime||'')+'<br>'+
+            '<b>業務</b> '+escapeHtml(report.owner||'未指定')+'<br>'+
+            '<b>客戶編號</b> '+escapeHtml(report.customerCode||'無')+'<br>'+
+            '<b>回報類型</b> '+escapeHtml(report.reportType||report.status||'回報')+'<br>'+
+            '<b>地址</b> '+escapeHtml(report.address||'無')+
+          '</div>'+
+          '<div class="report-content">'+escapeHtml(report.content||report.note||'無回報內容')+'</div>'+
+          (mapsUrl?'<div class="actions"><a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a></div>':'')+
+        '</div>'+
+        '<div class="thread-block">'+
+          '<div class="thread-label">Boss 回覆歷史</div>'+
+          renderReplyList(replies)+
+        '</div>'+
+        '<div class="thread-block">'+
+          '<div class="thread-label">新增回覆</div>'+
+          '<div class="reply-form">'+
+            '<textarea class="form-control" id="bossReplyContent" placeholder="輸入給自己的處理備忘、交辦重點或追蹤原因"></textarea>'+
+            '<div class="form-row">'+
+              '<select class="form-control" id="bossReplyStatus">'+
+                '<option value="已回覆">已回覆</option>'+
+                '<option value="需追蹤">需追蹤</option>'+
+                '<option value="未處理">未處理</option>'+
+                '<option value="已完成">已完成</option>'+
+                '<option value="暫緩">暫緩</option>'+
+                '<option value="不處理">不處理</option>'+
+              '</select>'+
+              '<select class="form-control" id="bossReplyImportance">'+
+                '<option value="B">重要程度 B</option>'+
+                '<option value="A">重要程度 A</option>'+
+                '<option value="C">重要程度 C</option>'+
+              '</select>'+
+              '<input class="form-control" id="bossReplyNextDate" type="date">'+
+            '</div>'+
+            '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存回覆</button>'+
+          '</div>'+
+        '</div>';
+    }
+
+    function renderReplyList(replies){
+      if(!replies.length){
+        return '<div class="empty">目前尚無 Boss 回覆。</div>';
+      }
+
+      return '<div class="reply-list">'+replies.map(function(reply){
+        return '<div class="reply-item">'+
+          '<div class="reply-state">'+
+            '<span class="reply-chip done">'+escapeHtml(reply.status||'已回覆')+'</span>'+
+            '<span class="reply-chip '+(reply.importance==='A'?'hot':'')+'">重要 '+escapeHtml(reply.importance||'B')+'</span>'+
+            (reply.nextFollowUpDate?'<span class="reply-chip">追蹤 '+escapeHtml(reply.nextFollowUpDate)+'</span>':'')+
+          '</div>'+
+          '<div class="report-meta">'+escapeHtml(reply.replyTime||'')+'｜'+escapeHtml(reply.replyBy||'Boss')+'</div>'+
+          '<div class="report-content">'+escapeHtml(reply.content||'')+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function saveBossReply(){
+      if(!activeReportThread || !activeReportThread.report || !activeReportThread.report.reportId){
+        alert('找不到目前回報，請重新開啟討論串。');
+        return;
+      }
+
+      const content=document.getElementById('bossReplyContent').value.trim();
+
+      if(!content){
+        alert('請先輸入回覆內容。');
+        return;
+      }
+
+      const btn=document.getElementById('bossReplySaveBtn');
+      btn.disabled=true;
+      btn.textContent='儲存中...';
+
+      jsonp({
+        action:'saveBossReportReply',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          reportId:activeReportThread.report.reportId,
+          replyContent:content,
+          status:document.getElementById('bossReplyStatus').value,
+          importance:document.getElementById('bossReplyImportance').value,
+          nextFollowUpDate:document.getElementById('bossReplyNextDate').value
+        })
+      }).then(function(result){
+        const reply=result.reply||{};
+        activeReportThread.replies=activeReportThread.replies||[];
+        activeReportThread.replies.push(reply);
+        activeReportThread.report.hasBossReply=true;
+        activeReportThread.report.latestBossReplyTime=reply.replyTime||'';
+        activeReportThread.report.latestBossStatus=reply.status||'';
+        activeReportThread.report.latestBossImportance=reply.importance||'';
+        updateDashboardReportReply(activeReportThread.report.reportId,reply);
+        renderReportSummary((dashboardData&&dashboardData.reportSummary)||{});
+        renderReportThread(activeReportThread,'回覆已儲存。');
+      }).catch(function(err){
+        alert('儲存失敗：'+err.message);
+        btn.disabled=false;
+        btn.textContent='儲存回覆';
+      });
+    }
+
+    function updateDashboardReportReply(reportId,reply){
+      const reports=dashboardData&&dashboardData.reportSummary&&Array.isArray(dashboardData.reportSummary.reports)
+        ? dashboardData.reportSummary.reports
+        : [];
+
+      reports.forEach(function(report){
+        if(report.reportId===reportId){
+          report.hasBossReply=true;
+          report.latestBossReplyTime=reply.replyTime||'';
+          report.latestBossStatus=reply.status||'';
+          report.latestBossImportance=reply.importance||'';
+          report.bossReplyCount=Number(report.bossReplyCount||0)+1;
+        }
+      });
+    }
+
+    function queryReportHistory(){
+      const keyword=document.getElementById('reportHistorySearch').value.trim();
+      const target=document.getElementById('reportHistoryResults');
+
+      if(!keyword){
+        target.innerHTML='<div class="empty">請輸入客戶名稱或客戶編號。</div>';
+        return;
+      }
+
+      target.innerHTML='<div class="loading">查詢回報歷史中...</div>';
+
+      jsonp({
+        action:'getBossReportRepliesByCustomer',
+        token:API_TOKEN,
+        keyword:keyword
+      }).then(function(data){
+        renderReportHistory(data||{});
+      }).catch(function(err){
+        target.innerHTML='<div class="error">查詢失敗：'+escapeHtml(err.message)+'</div>';
+      });
+    }
+
+    function renderReportHistory(data){
+      const target=document.getElementById('reportHistoryResults');
+      const rows=Array.isArray(data.reports)?data.reports:[];
+
+      if(!rows.length){
+        target.innerHTML='<div class="empty">查無此客戶的回報紀錄。</div>';
+        return;
+      }
+
+      target.innerHTML=rows.map(function(item){
+        const report=item.report||{};
+        const replies=Array.isArray(item.replies)?item.replies:[];
+        return '<div class="history-card">'+
+          '<div class="report-title">'+
+            '<span>'+escapeHtml(report.customerName||'未命名客戶')+'</span>'+
+            '<span class="report-type">'+escapeHtml(report.reportType||report.status||'回報')+'</span>'+
+          '</div>'+
+          '<div class="report-meta">'+escapeHtml(report.timestamp||report.reportTime||'')+'｜'+escapeHtml(report.owner||'未指定')+'</div>'+
+          '<div class="report-content">'+escapeHtml(report.content||report.note||'無回報內容')+'</div>'+
+          '<div class="actions"><button class="action action-secondary" data-report-thread="'+escapeAttr(report.reportId||'')+'">查看 / 回覆</button></div>'+
+          '<div style="margin-top:8px">'+renderReplyList(replies)+'</div>'+
+        '</div>';
+      }).join('');
+
+      bindReportThreadButtons(target);
     }
 
     function voidUnmatchedDraft(draftId){
