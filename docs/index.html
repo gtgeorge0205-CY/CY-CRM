@@ -2260,15 +2260,59 @@ function openVisitDraftDetail(index){
     <div class="quick-card">
       <div class="quick-card-name">${escapeHtml(currentVisitDraft.customerName||'')}</div>
       <div class="quick-card-meta">建立時間：${escapeHtml(currentVisitDraft.createdAt||'')}</div>
-      <select class="quick-select" id="draftVisitStatus">
-        <option value="">選擇拜訪狀況</option>
-        <option value="✅ 成交">✅ 成交</option>
-        <option value="🔥 機會">🔥 機會</option>
-        <option value="📌 追蹤">📌 追蹤</option>
-        <option value="⚠️ 異常">⚠️ 異常</option>
-        <option value="💰 收款">💰 收款</option>
-        <option value="☎️ 電訪 / 沒遇到">☎️ 電訪 / 沒遇到</option>
-      </select>
+      <div class="note-label" style="margin-top:12px">接觸類型</div>
+      <div class="contact-type-grid" id="draftContactTypeGrid">
+        <label class="contact-type-option selected">
+          <input type="radio" name="draftContactType" value="日常拜訪 / 電話 / LINE" checked>
+          <span>日常拜訪 / 電話 / LINE</span>
+        </label>
+        <label class="contact-type-option">
+          <input type="radio" name="draftContactType" value="收款">
+          <span>收款</span>
+        </label>
+        <label class="contact-type-option">
+          <input type="radio" name="draftContactType" value="其他">
+          <span>其他</span>
+        </label>
+      </div>
+
+      <div class="note-label">快速標記</div>
+      <div class="quick-tag-tools">
+        <div class="quick-tag-toggle-grid">
+          <button type="button" class="quick-tag-toggle" data-draft-tag-toggle="opportunity" onclick="toggleDraftQuickTagPanel('opportunity')">＋機會 0</button>
+          <button type="button" class="quick-tag-toggle" data-draft-tag-toggle="risk" onclick="toggleDraftQuickTagPanel('risk')">＋異常 0</button>
+          <button type="button" class="quick-tag-toggle" data-draft-tag-toggle="customerChange" onclick="toggleDraftQuickTagPanel('customerChange')">＋客戶變化 0</button>
+        </div>
+
+        <div class="quick-tag-panel" data-draft-tag-panel="opportunity">
+          <div class="quick-tag-options">
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="opportunity" value="技術 / 資訊支援需求">技術 / 資訊支援需求</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="opportunity" value="設備工具需求">設備工具需求</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="opportunity" value="油品機會">油品機會</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="opportunity" value="電池機會">電池機會</label>
+          </div>
+        </div>
+
+        <div class="quick-tag-panel" data-draft-tag-panel="risk">
+          <div class="quick-tag-options">
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="risk" value="競品入侵">競品入侵</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="risk" value="客訴">客訴</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="risk" value="不良品">不良品</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="risk" value="收款風險">收款風險</label>
+          </div>
+        </div>
+
+        <div class="quick-tag-panel" data-draft-tag-panel="customerChange">
+          <div class="quick-tag-options">
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="customerChange" value="人員異動">人員異動</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="customerChange" value="新增 / 汰換設備">新增 / 汰換設備</label>
+            <label class="quick-tag-option"><input type="checkbox" data-draft-tag-group="customerChange" value="營業狀態變化">營業狀態變化</label>
+          </div>
+        </div>
+
+        <div class="auto-tag-hint" id="draftAutoTagHint"></div>
+      </div>
+
       <textarea class="quick-textarea" id="draftNote" placeholder="補上拜訪重點">${escapeHtml(currentVisitDraft.note||'')}</textarea>
       <input class="quick-input" id="draftNextAction" placeholder="後續動作，可空白">
       <div class="quick-actions">
@@ -2277,6 +2321,7 @@ function openVisitDraftDetail(index){
       </div>
     </div>
   `;
+  bindDraftReportForm();
 }
 
 function openUnmatchedDraftDetail(){
@@ -2310,17 +2355,17 @@ function completeVisitDraftReport(){
     return;
   }
 
-  const status=document.getElementById('draftVisitStatus').value;
   const note=document.getElementById('draftNote').value.trim();
   const nextAction=document.getElementById('draftNextAction').value.trim();
+  const contactType=getDraftContactType();
 
-  if(!status){
-    alert('請先選擇拜訪狀況');
+  if(!contactType){
+    alert('請先選擇接觸類型');
     return;
   }
 
-  if(isNoteRequiredStatus(status) && !note){
-    alert('這個狀態需要補一句重點，方便下次追蹤。');
+  if(!note){
+    alert('請輸入回報內容');
     return;
   }
 
@@ -2336,9 +2381,15 @@ function completeVisitDraftReport(){
     token:API_TOKEN,
     payload:JSON.stringify({
       draftId:currentVisitDraft.draftId,
-      visitStatus:status,
+      visitStatus:contactType,
+      contactType:contactType,
       note:note,
-      nextAction:nextAction
+      nextAction:nextAction,
+      opportunityTags:getDraftQuickTags('opportunity'),
+      riskTags:getDraftQuickTags('risk'),
+      customerChangeTags:getDraftQuickTags('customerChange'),
+      autoDetectedTags:detectAutoReportTags(note),
+      quickTagVersion:'v1_62'
     })
   }).then(function(res){
     isCompletingVisitDraft=false;
@@ -3473,6 +3524,147 @@ function applyDetectedTags(){
 
   updateQuickTagCounts();
   updateAutoTagHint();
+}
+
+function bindDraftReportForm(){
+  document.querySelectorAll('input[name="draftContactType"]').forEach(function(input){
+    input.addEventListener('change',updateDraftContactTypeButtons);
+  });
+  document.querySelectorAll('[data-draft-tag-group]').forEach(function(input){
+    input.addEventListener('change',function(){
+      enforceDraftQuickTagLimit(this);
+      updateDraftQuickTagCounts();
+      updateDraftAutoTagHint();
+    });
+  });
+
+  const note=document.getElementById('draftNote');
+
+  if(note){
+    note.addEventListener('input',updateDraftAutoTagHint);
+    updateDraftAutoTagHint();
+  }
+
+  updateDraftContactTypeButtons();
+  updateDraftQuickTagCounts();
+}
+
+function getDraftContactType(){
+  const checked=document.querySelector('input[name="draftContactType"]:checked');
+  return checked ? checked.value : '日常拜訪 / 電話 / LINE';
+}
+
+function updateDraftContactTypeButtons(){
+  document.querySelectorAll('#draftContactTypeGrid .contact-type-option').forEach(function(label){
+    const input=label.querySelector('input[name="draftContactType"]');
+    label.classList.toggle('selected',!!(input && input.checked));
+  });
+}
+
+function toggleDraftQuickTagPanel(group){
+  const panel=document.querySelector('[data-draft-tag-panel="'+group+'"]');
+  const toggle=document.querySelector('[data-draft-tag-toggle="'+group+'"]');
+
+  if(!panel){
+    return;
+  }
+
+  panel.classList.toggle('show');
+
+  if(toggle){
+    toggle.classList.toggle('active',panel.classList.contains('show'));
+  }
+}
+
+function getDraftQuickTags(group){
+  return Array.from(document.querySelectorAll('[data-draft-tag-group="'+group+'"]:checked')).map(function(input){
+    return input.value;
+  });
+}
+
+function enforceDraftQuickTagLimit(input){
+  const group=input.getAttribute('data-draft-tag-group');
+
+  if(!group || !input.checked){
+    return;
+  }
+
+  const checked=Array.from(document.querySelectorAll('[data-draft-tag-group="'+group+'"]:checked'));
+
+  if(checked.length>2){
+    input.checked=false;
+    alert((QUICK_TAG_GROUP_LABELS[group]||'此類標記')+'最多勾選 2 個');
+  }
+}
+
+function updateDraftQuickTagCounts(){
+  Object.keys(QUICK_TAG_GROUP_LABELS).forEach(function(group){
+    const btn=document.querySelector('[data-draft-tag-toggle="'+group+'"]');
+    const count=getDraftQuickTags(group).length;
+    const prefix=count ? '' : '＋';
+
+    if(btn){
+      btn.textContent=prefix+QUICK_TAG_GROUP_LABELS[group]+' '+count;
+    }
+  });
+}
+
+function updateDraftAutoTagHint(){
+  const hint=document.getElementById('draftAutoTagHint');
+  const note=document.getElementById('draftNote');
+
+  if(!hint || !note){
+    return;
+  }
+
+  const detected=detectAutoReportTags(note.value);
+
+  if(!detected.length){
+    hint.classList.remove('show');
+    hint.innerHTML='';
+    return;
+  }
+
+  hint.classList.add('show');
+  hint.innerHTML='偵測到可能標籤：'+detected.map(escapeHtml).join('、')+
+    '<br><button type="button" onclick="applyDraftDetectedTags()">一鍵加入</button>';
+}
+
+function applyDraftDetectedTags(){
+  const note=document.getElementById('draftNote');
+
+  detectAutoReportTags(note ? note.value : '').forEach(function(tag){
+    const rule=AUTO_TAG_RULES.find(function(item){
+      return item.tag===tag;
+    });
+
+    if(!rule){
+      return;
+    }
+
+    const current=getDraftQuickTags(rule.group);
+    const input=Array.from(document.querySelectorAll('[data-draft-tag-group="'+rule.group+'"]')).find(function(item){
+      return item.value===tag;
+    });
+
+    if(input && !input.checked && current.length<2){
+      input.checked=true;
+    }
+
+    const panel=document.querySelector('[data-draft-tag-panel="'+rule.group+'"]');
+    const toggle=document.querySelector('[data-draft-tag-toggle="'+rule.group+'"]');
+
+    if(panel){
+      panel.classList.add('show');
+    }
+
+    if(toggle){
+      toggle.classList.add('active');
+    }
+  });
+
+  updateDraftQuickTagCounts();
+  updateDraftAutoTagHint();
 }
 
 function pickStatus(btn,status){
