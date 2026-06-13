@@ -197,6 +197,25 @@
     .reply-chip{display:inline-flex;align-items:center;border:1px solid var(--line-soft);border-radius:8px;padding:4px 7px;background:rgba(255,255,255,.028);color:var(--silver);font-size:12px;font-weight:900}
     .reply-chip.hot{border-color:rgba(250,204,21,.38);background:rgba(250,204,21,.1);color:#fde68a}
     .reply-chip.done{border-color:rgba(0,229,192,.32);background:rgba(0,229,192,.09);color:#dffff9}
+    .followup-summary{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:10px}
+    .followup-metric{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px;min-height:82px}
+    .followup-metric.warn{border-color:rgba(250,204,21,.34);background:rgba(250,204,21,.08)}
+    .followup-metric strong{display:block;font-size:27px;line-height:1;color:#fff;margin-top:5px}
+    .followup-metric span{display:block;font-size:12px;color:var(--muted);font-weight:900}
+    .followup-filter{display:flex;gap:7px;flex-wrap:wrap;margin:9px 0 11px}
+    .filter-btn{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.035);color:var(--silver);min-height:38px;padding:7px 10px;font-weight:900}
+    .filter-btn.active{border-color:rgba(0,229,192,.44);background:var(--teal-soft);color:#dffff9}
+    .followup-list{display:grid;gap:9px}
+    .followup-card{border:1px solid var(--line-soft);border-left:4px solid rgba(148,163,184,.45);border-radius:8px;background:rgba(255,255,255,.026);padding:11px;line-height:1.55}
+    .followup-card.priority-high{border-color:rgba(250,204,21,.34);border-left-color:var(--yellow);background:linear-gradient(180deg,rgba(250,204,21,.075),rgba(17,24,32,.78))}
+    .followup-card.overdue{border-color:rgba(248,113,113,.34);border-left-color:var(--red);background:linear-gradient(180deg,rgba(248,113,113,.08),rgba(17,24,32,.78))}
+    .followup-title{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;color:#fff;font-size:18px;font-weight:950;word-break:break-word}
+    .followup-meta{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.55}
+    .followup-copy{font-size:13px;color:var(--silver);margin-top:7px;word-break:break-word}
+    .followup-copy b{color:#fff}
+    .char-row{display:flex;justify-content:flex-end;color:var(--muted);font-size:12px;margin-top:-4px}
+    .history-section{border-top:1px solid var(--line-soft);padding-top:9px;margin-top:9px}
+    .history-section:first-child{border-top:0;padding-top:0;margin-top:0}
     .thread-modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.68)}
     .thread-modal.show{display:flex}
     .thread-panel{width:min(860px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(0,229,192,.25);border-radius:10px;background:#0b1118;box-shadow:var(--shadow);padding:14px}
@@ -265,6 +284,10 @@
       .action-signal-wrap{grid-template-columns:1fr}
       .signal-title{font-size:19px}
       .signal-head{align-items:flex-start}
+      .followup-summary{grid-template-columns:1fr 1fr}
+      .followup-title{font-size:17px}
+      .followup-filter{gap:6px}
+      .filter-btn{flex:1 1 auto}
       .form-row{grid-template-columns:1fr}
       .thread-modal{align-items:flex-end;padding:8px}
       .thread-panel{max-height:94vh;padding:12px}
@@ -279,6 +302,7 @@
       .refresh{width:100%}
       .grid{grid-template-columns:1fr 1fr}
       .sales-status-grid{grid-template-columns:1fr}
+      .followup-summary{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -331,6 +355,14 @@
         </div>
       </div>
       <div class="panel" id="salesSummary"></div>
+
+      <div class="section-head section">
+        <div>
+          <div class="section-kicker">Boss 待辦追蹤</div>
+          <h2 class="section-title">Boss 待辦追蹤</h2>
+        </div>
+      </div>
+      <div class="panel" id="followupBoard"></div>
 
       <div class="section-head section">
         <div>
@@ -405,6 +437,7 @@
     let customers=[];
     let reportExpanded=false;
     let actionSignalsExpanded=false;
+    let followupFilter='全部待辦';
     let activeReportThread=null;
 
     document.getElementById('customerSearch').addEventListener('input',renderCustomerSearch);
@@ -456,6 +489,7 @@
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
       renderSalesSummary(data.salesSummary||{});
+      renderFollowupBoard(data.followupBoard||{});
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
     }
@@ -533,6 +567,98 @@
       });
     }
 
+    function renderFollowupBoard(board){
+      const target=document.getElementById('followupBoard');
+      board=board||{};
+      const rows=Array.isArray(board.items)?board.items:[];
+      const filtered=filterFollowupRows(rows,followupFilter);
+      const activeCount=rows.filter(function(item){
+        const status=normalizeBossStatus(item.latestBossStatus);
+        return status!=='已完成' && status!=='不處理';
+      }).length;
+      const summary=[
+        {label:'逾期',value:board.overdueCount||0,warn:(board.overdueCount||0)>0},
+        {label:'今日到期',value:board.dueTodayCount||0,warn:(board.dueTodayCount||0)>0},
+        {label:'A級重要',value:board.aLevelCount||0,warn:(board.aLevelCount||0)>0},
+        {label:'未處理',value:board.unhandledCount||0,warn:(board.unhandledCount||0)>0},
+        {label:'需追蹤',value:board.trackingCount||0,warn:(board.trackingCount||0)>0}
+      ];
+      const filters=['全部待辦','逾期','今日到期','A級重要','未處理','需追蹤','暫緩','已完成','不處理'];
+
+      if(board.message && !rows.length){
+        target.innerHTML='<div class="empty">'+escapeHtml(board.message)+'</div>';
+        return;
+      }
+
+      target.innerHTML=
+        '<div class="followup-summary">'+summary.map(function(item){
+          return '<div class="followup-metric '+(item.warn?'warn':'')+'">'+
+            '<span>'+escapeHtml(item.label)+'</span>'+
+            '<strong>'+num(item.value)+'</strong>'+
+          '</div>';
+        }).join('')+'</div>'+
+        '<div class="report-meta">目前待辦 '+num(activeCount)+' 筆｜依緊急度排序</div>'+
+        '<div class="followup-filter">'+filters.map(function(label){
+          return '<button class="filter-btn '+(followupFilter===label?'active':'')+'" data-followup-filter="'+escapeAttr(label)+'">'+escapeHtml(label)+'</button>';
+        }).join('')+'</div>'+
+        (filtered.length
+          ? '<div class="followup-list">'+filtered.map(renderFollowupCard).join('')+'</div>'
+          : '<div class="empty">'+(followupFilter==='全部待辦'?'目前沒有待辦追蹤事項。':'此篩選目前沒有資料。')+'</div>');
+
+      Array.prototype.forEach.call(target.querySelectorAll('[data-followup-filter]'),function(btn){
+        btn.addEventListener('click',function(){
+          followupFilter=btn.getAttribute('data-followup-filter')||'全部待辦';
+          renderFollowupBoard((dashboardData&&dashboardData.followupBoard)||{});
+        });
+      });
+      bindReportThreadButtons(target);
+    }
+
+    function filterFollowupRows(rows,filter){
+      return rows.filter(function(row){
+        const status=normalizeBossStatus(row.latestBossStatus);
+        const bucket=row.followupBucket||'';
+
+        if(filter==='逾期') return !!row.isOverdue;
+        if(filter==='今日到期') return !!row.isDueToday;
+        if(filter==='A級重要') return String(row.latestBossImportance||'').toUpperCase()==='A' && status!=='已完成' && status!=='不處理';
+        if(filter==='未處理') return bucket==='未處理' || (!row.hasBossReply || !status);
+        if(filter==='需追蹤') return status==='需追蹤';
+        if(filter==='暫緩') return status==='暫緩';
+        if(filter==='已完成') return status==='已完成';
+        if(filter==='不處理') return status==='不處理';
+        return status!=='已完成' && status!=='不處理';
+      });
+    }
+
+    function renderFollowupCard(row){
+      const status=normalizeBossStatus(row.latestBossStatus);
+      const importance=String(row.latestBossImportance||'').toUpperCase();
+      const cardClass=row.isOverdue?'followup-card overdue':(importance==='A'?'followup-card priority-high':'followup-card');
+      const reportText=trimText(row.reportContent||'無回報內容',110);
+      const replyText=row.latestReplyContent?trimText(row.latestReplyContent,110):(row.hasBossReply?'無回覆內容':'尚無 Boss 回覆');
+
+      return '<div class="'+cardClass+'">'+
+        '<div class="followup-title">'+
+          '<span>'+escapeHtml(row.customerName||'未命名客戶')+'</span>'+
+          '<span class="reply-chip '+(importance==='A'?'hot':'')+'">'+escapeHtml(row.followupBucket||status||'未處理')+'</span>'+
+        '</div>'+
+        '<div class="followup-meta">'+
+          '客戶編號 '+escapeHtml(row.customerCode||'無')+'｜業務 '+escapeHtml(row.owner||'未指定')+'｜分數 '+num(row.urgencyScore)+'<br>'+
+          '原始回報 '+escapeHtml(row.reportTime||'無')+'｜最近回覆 '+escapeHtml(row.latestReplyTime||'無')+
+        '</div>'+
+        '<div class="reply-state">'+
+          '<span class="reply-chip '+(row.hasBossReply?'done':'')+'">'+escapeHtml(row.hasBossReply?'已有回覆':'尚無回覆')+'</span>'+
+          '<span class="reply-chip">'+escapeHtml(status||'未處理')+'</span>'+
+          (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
+          (row.nextFollowDate?'<span class="reply-chip '+(row.isOverdue?'hot':'')+'">追蹤 '+escapeHtml(row.nextFollowDate)+'</span>':'')+
+        '</div>'+
+        '<div class="followup-copy"><b>原始回報</b> '+escapeHtml(reportText)+'</div>'+
+        '<div class="followup-copy"><b>最新回覆</b> '+escapeHtml(replyText)+'</div>'+
+        '<div class="actions"><button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button></div>'+
+      '</div>';
+    }
+
     function renderReportSummary(summary){
       const target=document.getElementById('todayReports');
 
@@ -587,14 +713,14 @@
       const mapsUrl=row.googleMapsUrl || (row.lat&&row.lng?'https://www.google.com/maps?q='+encodeURIComponent(row.lat+','+row.lng):'');
       const hasReply=!!row.hasBossReply;
       const importance=String(row.latestBossImportance||'').toUpperCase();
+      const processStatus=normalizeBossStatus(row.latestBossStatus);
       const cardClass=importance==='A'?' report-card reply-a':' report-card';
-      const replyState=hasReply
-        ? '<div class="reply-state">'+
-            '<span class="reply-chip done">'+escapeHtml(row.latestBossStatus||'已回覆')+'</span>'+
-            (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
-            '<span class="reply-chip">最近回覆 '+escapeHtml(row.latestBossReplyTime||'')+'</span>'+
-          '</div>'
-        : '<div class="reply-state"><span class="reply-chip">尚未回覆</span></div>';
+      const replyState='<div class="reply-state">'+
+        '<span class="reply-chip '+(hasReply?'done':'')+'">'+escapeHtml(hasReply?'已有回覆':'尚無回覆')+'</span>'+
+        (processStatus?'<span class="reply-chip">'+escapeHtml(processStatus)+'</span>':'')+
+        (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
+        (hasReply?'<span class="reply-chip">最近回覆 '+escapeHtml(row.latestBossReplyTime||'')+'</span>':'')+
+      '</div>';
 
       return '<div class="'+cardClass.trim()+'">'+
         '<div class="report-title">'+
@@ -743,6 +869,164 @@
     function toggleActionSignals(){
       actionSignalsExpanded=!actionSignalsExpanded;
       renderSalesSummary((dashboardData&&dashboardData.salesSummary)||{});
+    }
+
+    function updateBossReplyCount(){
+      const box=document.getElementById('bossReplyContent');
+      const count=document.getElementById('bossReplyCount');
+      if(count){
+        count.textContent=String((box&&box.value?box.value.length:0))+' / 300';
+      }
+    }
+
+    function upsertFollowupFromReply(report,reply){
+      if(!dashboardData){
+        return;
+      }
+
+      const board=dashboardData.followupBoard||{items:[]};
+      const items=Array.isArray(board.items)?board.items:[];
+      const nextItem=buildClientFollowupItem(report,reply);
+      board.items=items.filter(function(item){
+        return item.reportId!==nextItem.reportId;
+      }).concat([nextItem]).sort(compareClientFollowupItems);
+      dashboardData.followupBoard=recalculateClientFollowupBoard(board);
+    }
+
+    function buildClientFollowupItem(report,reply){
+      const status=normalizeBossStatus(reply.status)||'未處理';
+      const importance=String(reply.importance||'').toUpperCase();
+      const nextDate=reply.nextFollowUpDate||'';
+      const todayKey=getLocalDateKey(new Date());
+      const nextKey=getDateKeyFromInput(nextDate);
+      const isOverdue=status==='需追蹤' && nextKey && nextKey<todayKey;
+      const isDueToday=status==='需追蹤' && nextKey && nextKey===todayKey;
+      let bucket='未處理';
+
+      if(isOverdue) bucket='逾期';
+      else if(isDueToday) bucket='今日到期';
+      else if(importance==='A' && status!=='已完成' && status!=='不處理') bucket='A級重要';
+      else if(status==='需追蹤') bucket='需追蹤';
+      else if(status==='暫緩') bucket='暫緩';
+      else if(status==='已完成') bucket='已完成';
+      else if(status==='不處理') bucket='不處理';
+
+      const item={
+        reportId:report.reportId||reply.reportId||'',
+        replyId:reply.replyId||'',
+        customerCode:report.customerCode||reply.customerCode||'',
+        customerName:report.customerName||reply.customerName||'',
+        owner:report.owner||reply.owner||'未指定',
+        reportTime:report.timestamp||report.reportTime||'',
+        reportType:report.reportType||report.status||'',
+        reportContent:report.content||report.note||'',
+        latestReplyTime:reply.replyTime||'',
+        latestReplyContent:reply.content||'',
+        latestBossStatus:status,
+        latestBossImportance:importance,
+        nextFollowDate:nextDate,
+        followupBucket:bucket,
+        urgencyScore:0,
+        isOverdue:isOverdue,
+        isDueToday:isDueToday,
+        hasBossReply:true
+      };
+      item.urgencyScore=calculateClientUrgency(item);
+      return item;
+    }
+
+    function recalculateClientFollowupBoard(board){
+      const items=Array.isArray(board.items)?board.items:[];
+      const active=items.filter(function(item){
+        const status=normalizeBossStatus(item.latestBossStatus);
+        return status!=='已完成' && status!=='不處理';
+      });
+
+      board.totalCount=active.length;
+      board.overdueCount=items.filter(function(item){return !!item.isOverdue;}).length;
+      board.dueTodayCount=items.filter(function(item){return !!item.isDueToday;}).length;
+      board.aLevelCount=items.filter(function(item){
+        const status=normalizeBossStatus(item.latestBossStatus);
+        return String(item.latestBossImportance||'').toUpperCase()==='A' && status!=='已完成' && status!=='不處理';
+      }).length;
+      board.unhandledCount=items.filter(function(item){return item.followupBucket==='未處理';}).length;
+      board.trackingCount=items.filter(function(item){return item.followupBucket==='需追蹤';}).length;
+      return board;
+    }
+
+    function calculateClientUrgency(item){
+      let score=0;
+      const status=normalizeBossStatus(item.latestBossStatus);
+      const importance=String(item.latestBossImportance||'').toUpperCase();
+
+      if(item.isOverdue) score+=120;
+      if(item.isDueToday) score+=110;
+      if(importance==='A') score+=100;
+      if(status==='需追蹤') score+=80;
+      if(!item.hasBossReply || status==='未處理') score+=60;
+      if(importance==='B') score+=30;
+      if(status==='暫緩') score-=20;
+      if(status==='已完成') score-=80;
+      if(status==='不處理') score-=100;
+      return score;
+    }
+
+    function compareClientFollowupItems(a,b){
+      if((a.urgencyScore||0)!==(b.urgencyScore||0)){
+        return (b.urgencyScore||0)-(a.urgencyScore||0);
+      }
+
+      const ak=getDateKeyFromInput(a.nextFollowDate);
+      const bk=getDateKeyFromInput(b.nextFollowDate);
+
+      if(ak&&bk&&ak!==bk){
+        return ak.localeCompare(bk);
+      }
+
+      if(ak!==bk){
+        return ak?-1:1;
+      }
+
+      return getTimeMs(b.reportTime)-getTimeMs(a.reportTime);
+    }
+
+    function normalizeBossStatus(value){
+      const status=String(value||'').trim();
+      if(status==='已回覆'){
+        return '未處理';
+      }
+      return ['未處理','需追蹤','已完成','暫緩','不處理'].indexOf(status)!==-1 ? status : '';
+    }
+
+    function getLocalDateKey(date){
+      const d=date instanceof Date && !isNaN(date.getTime()) ? date : new Date();
+      const y=d.getFullYear();
+      const m=String(d.getMonth()+1).padStart(2,'0');
+      const day=String(d.getDate()).padStart(2,'0');
+      return ''+y+m+day;
+    }
+
+    function getDateKeyFromInput(value){
+      const text=String(value||'').trim();
+      if(!text){
+        return '';
+      }
+      const match=text.match(/(\d{4})[\/\-年]?(\d{1,2})[\/\-月]?(\d{1,2})/);
+      if(match){
+        return match[1]+String(match[2]).padStart(2,'0')+String(match[3]).padStart(2,'0');
+      }
+      const date=new Date(text);
+      return isNaN(date.getTime())?'':getLocalDateKey(date);
+    }
+
+    function getTimeMs(value){
+      const date=new Date(String(value||'').replace(/\//g,'-'));
+      return isNaN(date.getTime())?0:date.getTime();
+    }
+
+    function trimText(value,max){
+      const text=String(value||'').trim();
+      return text.length>max ? text.slice(0,max)+'...' : text;
     }
 
     function renderSalesStatusStats(rows){
@@ -917,12 +1201,12 @@
         '<div class="thread-block">'+
           '<div class="thread-label">新增回覆</div>'+
           '<div class="reply-form">'+
-            '<textarea class="form-control" id="bossReplyContent" placeholder="輸入給自己的處理備忘、交辦重點或追蹤原因"></textarea>'+
+            '<textarea class="form-control" id="bossReplyContent" maxlength="300" placeholder="輸入給自己的處理備忘、交辦重點或追蹤原因"></textarea>'+
+            '<div class="char-row"><span id="bossReplyCount">0 / 300</span></div>'+
             '<div class="form-row">'+
               '<select class="form-control" id="bossReplyStatus">'+
-                '<option value="已回覆">已回覆</option>'+
-                '<option value="需追蹤">需追蹤</option>'+
                 '<option value="未處理">未處理</option>'+
+                '<option value="需追蹤">需追蹤</option>'+
                 '<option value="已完成">已完成</option>'+
                 '<option value="暫緩">暫緩</option>'+
                 '<option value="不處理">不處理</option>'+
@@ -937,6 +1221,11 @@
             '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存回覆</button>'+
           '</div>'+
         '</div>';
+      const contentBox=document.getElementById('bossReplyContent');
+      if(contentBox){
+        contentBox.addEventListener('input',updateBossReplyCount);
+        updateBossReplyCount();
+      }
     }
 
     function renderReplyList(replies){
@@ -970,6 +1259,11 @@
         return;
       }
 
+      if(content.length>300){
+        alert('回覆內容請控制在 300 字內。');
+        return;
+      }
+
       const btn=document.getElementById('bossReplySaveBtn');
       btn.disabled=true;
       btn.textContent='儲存中...';
@@ -993,7 +1287,9 @@
         activeReportThread.report.latestBossStatus=reply.status||'';
         activeReportThread.report.latestBossImportance=reply.importance||'';
         updateDashboardReportReply(activeReportThread.report.reportId,reply);
+        upsertFollowupFromReply(activeReportThread.report,reply);
         renderReportSummary((dashboardData&&dashboardData.reportSummary)||{});
+        renderFollowupBoard((dashboardData&&dashboardData.followupBoard)||{});
         renderReportThread(activeReportThread,'回覆已儲存。');
       }).catch(function(err){
         alert('儲存失敗：'+err.message);
@@ -1053,14 +1349,20 @@
         const report=item.report||{};
         const replies=Array.isArray(item.replies)?item.replies:[];
         return '<div class="history-card">'+
-          '<div class="report-title">'+
-            '<span>'+escapeHtml(report.customerName||'未命名客戶')+'</span>'+
-            '<span class="report-type">'+escapeHtml(report.reportType||report.status||'回報')+'</span>'+
+          '<div class="history-section">'+
+            '<div class="thread-label">原始業務回報</div>'+
+            '<div class="report-title">'+
+              '<span>'+escapeHtml(report.customerName||'未命名客戶')+'</span>'+
+              '<span class="report-type">'+escapeHtml(report.reportType||report.status||'回報')+'</span>'+
+            '</div>'+
+            '<div class="report-meta">回報時間 '+escapeHtml(report.timestamp||report.reportTime||'')+'｜業務 '+escapeHtml(report.owner||'未指定')+'</div>'+
+            '<div class="report-content">'+escapeHtml(report.content||report.note||'無回報內容')+'</div>'+
           '</div>'+
-          '<div class="report-meta">'+escapeHtml(report.timestamp||report.reportTime||'')+'｜'+escapeHtml(report.owner||'未指定')+'</div>'+
-          '<div class="report-content">'+escapeHtml(report.content||report.note||'無回報內容')+'</div>'+
+          '<div class="history-section">'+
+            '<div class="thread-label">Boss 回覆</div>'+
+            (replies.length?renderReplyList(replies):'<div class="empty">尚無 Boss 回覆。</div>')+
+          '</div>'+
           '<div class="actions"><button class="action action-secondary" data-report-thread="'+escapeAttr(report.reportId||'')+'">查看 / 回覆</button></div>'+
-          '<div style="margin-top:8px">'+renderReplyList(replies)+'</div>'+
         '</div>';
       }).join('');
 
