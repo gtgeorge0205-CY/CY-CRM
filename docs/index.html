@@ -698,7 +698,7 @@ button{
 }
 
 .report-note-area{
-  display:none;
+  display:block;
   margin-top:12px;
 }
 
@@ -714,26 +714,36 @@ button{
 
 .contact-type-grid{
   display:grid;
-  grid-template-columns:1fr;
+  grid-template-columns:1.6fr .7fr .7fr;
   gap:8px;
   margin:10px 0 12px;
 }
 
 .contact-type-option{
+  position:relative;
   display:flex;
+  justify-content:center;
   align-items:center;
-  gap:8px;
-  padding:12px;
+  text-align:center;
+  min-height:54px;
+  padding:10px 8px;
   border-radius:14px;
   background:#ffffff;
-  color:#374151;
-  font-size:17px;
-  font-weight:800;
+  color:#1e88e5;
+  font-size:16px;
+  font-weight:900;
+  line-height:1.25;
 }
 
 .contact-type-option input{
-  width:18px;
-  height:18px;
+  position:absolute;
+  opacity:0;
+  pointer-events:none;
+}
+
+.contact-type-option.selected{
+  background:#2f80ed;
+  color:#ffffff;
 }
 
 .quick-tag-tools{
@@ -1040,18 +1050,10 @@ textarea{
 
       <div class="section report-section">
         <div class="section-title">📝 拜訪回報</div>
-        <div class="report-grid">
-          <button class="report-choice" onclick="pickStatus(this,'✅ 成交')">✅ 成交</button>
-          <button class="report-choice" onclick="pickStatus(this,'🔥 機會')">🔥 機會</button>
-          <button class="report-choice" onclick="pickStatus(this,'📌 追蹤')">📌 追蹤</button>
-          <button class="report-choice" onclick="pickStatus(this,'💰 收款')">💰 收款</button>
-          <button class="report-choice" onclick="pickStatus(this,'⚠️ 異常')">⚠️ 異常</button>
-          <button class="report-choice" onclick="pickStatus(this,'☎️ 電訪 / 沒遇到')">☎️ 電訪 / 沒遇到</button>
-        </div>
         <div class="report-note-area" id="reportNoteArea">
           <div class="note-label">接觸類型</div>
           <div class="contact-type-grid" id="contactTypeGrid">
-            <label class="contact-type-option">
+            <label class="contact-type-option selected">
               <input type="radio" name="contactType" value="日常拜訪 / 電話 / LINE" checked>
               <span>日常拜訪 / 電話 / LINE</span>
             </label>
@@ -1341,6 +1343,11 @@ document.querySelectorAll('[data-tag-group]').forEach(function(input){
   });
 });
 
+document.querySelectorAll('input[name="contactType"]').forEach(function(input){
+  input.addEventListener('change',updateContactTypeButtons);
+});
+
+updateContactTypeButtons();
 updateQuickTagCounts();
 
 function syncViewport(){
@@ -3207,13 +3214,8 @@ function openCustomerDetail(customer){
     return;
   }
 
-  document.querySelectorAll('.report-choice').forEach(function(b){
-    b.classList.remove('selected');
-  });
-
   document.getElementById('reportNote').value='';
   resetQuickReportTags();
-  hideReportNoteArea();
   resetReportButton();
   document.getElementById('detailView').classList.remove('input-mode');
   renderDetail();
@@ -3332,6 +3334,13 @@ function getSelectedContactType(){
   return checked ? checked.value : '日常拜訪 / 電話 / LINE';
 }
 
+function updateContactTypeButtons(){
+  document.querySelectorAll('.contact-type-option').forEach(function(label){
+    const input=label.querySelector('input[name="contactType"]');
+    label.classList.toggle('selected',!!(input && input.checked));
+  });
+}
+
 function getQuickTags(group){
   return Array.from(document.querySelectorAll('[data-tag-group="'+group+'"]:checked')).map(function(input){
     return input.value;
@@ -3371,6 +3380,8 @@ function resetQuickReportTags(){
   if(defaultContact){
     defaultContact.checked=true;
   }
+
+  updateContactTypeButtons();
 
   document.querySelectorAll('[data-tag-group]').forEach(function(input){
     input.checked=false;
@@ -3514,16 +3525,16 @@ function submitReport(){
     return;
   }
 
-  if(!selectedStatus){
-    alert('請先選擇狀態');
+  const note=document.getElementById('reportNote').value.trim();
+  const contactType=getSelectedContactType();
+
+  if(!contactType){
+    alert('請先選擇接觸類型');
     return;
   }
 
-  const note=document.getElementById('reportNote').value.trim();
-
   if(!note){
     alert('請輸入回報內容');
-    showReportNoteArea();
     reportNote.focus();
     return;
   }
@@ -3540,9 +3551,9 @@ function submitReport(){
     customerName:currentCustomer.customerName||'',
     owner:currentCustomer.owner||'',
     region:currentCustomer.region||'',
-    status:selectedStatus,
+    status:contactType,
     note:note,
-    contactType:getSelectedContactType(),
+    contactType:contactType,
     opportunityTags:getQuickTags('opportunity'),
     riskTags:getQuickTags('risk'),
     customerChangeTags:getQuickTags('customerChange'),
@@ -3617,7 +3628,9 @@ function saveReportOffline(note){
 }
 
 function updateCurrentCustomerAfterReport(note,timeText){
-  currentCustomer.lastStatus=selectedStatus;
+  const status=getSelectedContactType();
+
+  currentCustomer.lastStatus=status;
   currentCustomer.lastVisit=timeText;
   currentCustomer.lastNote=note;
 
@@ -3627,7 +3640,7 @@ function updateCurrentCustomerAfterReport(note,timeText){
 
   currentCustomer.history.unshift({
     time:timeText,
-    status:selectedStatus,
+    status:status,
     note:note
   });
 }
