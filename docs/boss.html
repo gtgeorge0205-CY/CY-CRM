@@ -573,8 +573,7 @@
       const rows=Array.isArray(board.items)?board.items:[];
       const filtered=filterFollowupRows(rows,followupFilter);
       const activeCount=rows.filter(function(item){
-        const status=normalizeBossStatus(item.latestBossStatus);
-        return status!=='已完成' && status!=='不處理';
+        return !isClosedFollowup(item);
       }).length;
       const summary=[
         {label:'逾期',value:board.overdueCount||0,warn:(board.overdueCount||0)>0},
@@ -618,16 +617,18 @@
       return rows.filter(function(row){
         const status=normalizeBossStatus(row.latestBossStatus);
         const bucket=row.followupBucket||'';
+        const closed=isClosedFollowup(row);
 
+        if(filter==='已完成') return status==='已完成';
+        if(filter==='不處理') return status==='不處理';
+        if(closed) return false;
         if(filter==='逾期') return !!row.isOverdue;
         if(filter==='今日到期') return !!row.isDueToday;
-        if(filter==='A級重要') return String(row.latestBossImportance||'').toUpperCase()==='A' && status!=='已完成' && status!=='不處理';
+        if(filter==='A級重要') return String(row.latestBossImportance||'').toUpperCase()==='A';
         if(filter==='未處理') return bucket==='未處理' || (!row.hasBossReply || !status);
         if(filter==='需追蹤') return status==='需追蹤';
         if(filter==='暫緩') return status==='暫緩';
-        if(filter==='已完成') return status==='已完成';
-        if(filter==='不處理') return status==='不處理';
-        return status!=='已完成' && status!=='不處理';
+        return true;
       });
     }
 
@@ -905,11 +906,11 @@
 
       if(isOverdue) bucket='逾期';
       else if(isDueToday) bucket='今日到期';
-      else if(importance==='A' && status!=='已完成' && status!=='不處理') bucket='A級重要';
-      else if(status==='需追蹤') bucket='需追蹤';
-      else if(status==='暫緩') bucket='暫緩';
       else if(status==='已完成') bucket='已完成';
       else if(status==='不處理') bucket='不處理';
+      else if(importance==='A') bucket='A級重要';
+      else if(status==='需追蹤') bucket='需追蹤';
+      else if(status==='暫緩') bucket='暫緩';
 
       const item={
         reportId:report.reportId||reply.reportId||'',
@@ -938,19 +939,17 @@
     function recalculateClientFollowupBoard(board){
       const items=Array.isArray(board.items)?board.items:[];
       const active=items.filter(function(item){
-        const status=normalizeBossStatus(item.latestBossStatus);
-        return status!=='已完成' && status!=='不處理';
+        return !isClosedFollowup(item);
       });
 
       board.totalCount=active.length;
-      board.overdueCount=items.filter(function(item){return !!item.isOverdue;}).length;
-      board.dueTodayCount=items.filter(function(item){return !!item.isDueToday;}).length;
-      board.aLevelCount=items.filter(function(item){
-        const status=normalizeBossStatus(item.latestBossStatus);
-        return String(item.latestBossImportance||'').toUpperCase()==='A' && status!=='已完成' && status!=='不處理';
+      board.overdueCount=active.filter(function(item){return !!item.isOverdue;}).length;
+      board.dueTodayCount=active.filter(function(item){return !!item.isDueToday;}).length;
+      board.aLevelCount=active.filter(function(item){
+        return String(item.latestBossImportance||'').toUpperCase()==='A';
       }).length;
-      board.unhandledCount=items.filter(function(item){return item.followupBucket==='未處理';}).length;
-      board.trackingCount=items.filter(function(item){return item.followupBucket==='需追蹤';}).length;
+      board.unhandledCount=active.filter(function(item){return item.followupBucket==='未處理';}).length;
+      board.trackingCount=active.filter(function(item){return item.followupBucket==='需追蹤';}).length;
       return board;
     }
 
@@ -958,6 +957,10 @@
       let score=0;
       const status=normalizeBossStatus(item.latestBossStatus);
       const importance=String(item.latestBossImportance||'').toUpperCase();
+
+      if(isClosedFollowup(item)){
+        return status==='已完成' ? -80 : -100;
+      }
 
       if(item.isOverdue) score+=120;
       if(item.isDueToday) score+=110;
@@ -996,6 +999,11 @@
         return '未處理';
       }
       return ['未處理','需追蹤','已完成','暫緩','不處理'].indexOf(status)!==-1 ? status : '';
+    }
+
+    function isClosedFollowup(itemOrStatus){
+      const status=typeof itemOrStatus==='string' ? normalizeBossStatus(itemOrStatus) : normalizeBossStatus((itemOrStatus&&itemOrStatus.latestBossStatus)||'');
+      return status==='已完成' || status==='不處理';
     }
 
     function getLocalDateKey(date){
