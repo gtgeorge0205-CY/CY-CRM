@@ -712,6 +712,116 @@ button{
   color:#374151;
 }
 
+.contact-type-grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+  margin:10px 0 12px;
+}
+
+.contact-type-option{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:12px;
+  border-radius:14px;
+  background:#ffffff;
+  color:#374151;
+  font-size:17px;
+  font-weight:800;
+}
+
+.contact-type-option input{
+  width:18px;
+  height:18px;
+}
+
+.quick-tag-tools{
+  margin:6px 0 12px;
+}
+
+.quick-tag-toggle-grid{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+
+.quick-tag-toggle{
+  min-height:44px;
+  padding:8px 6px;
+  border-radius:14px;
+  background:#eef6ff;
+  color:#1d4ed8;
+  font-size:16px;
+  font-weight:900;
+}
+
+.quick-tag-toggle.active{
+  background:#dbeafe;
+  color:#1e40af;
+}
+
+.quick-tag-panel{
+  display:none;
+  margin-top:8px;
+  padding:10px;
+  border-radius:14px;
+  background:#f8fafc;
+}
+
+.quick-tag-panel.show{
+  display:block;
+}
+
+.quick-tag-options{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:8px;
+}
+
+.quick-tag-option{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border-radius:12px;
+  background:#ffffff;
+  color:#374151;
+  font-size:16px;
+  font-weight:800;
+}
+
+.quick-tag-option input{
+  width:18px;
+  height:18px;
+}
+
+.auto-tag-hint{
+  display:none;
+  margin-top:10px;
+  padding:10px;
+  border-radius:14px;
+  background:#fff7ed;
+  color:#9a3412;
+  font-size:15px;
+  font-weight:800;
+  line-height:1.4;
+}
+
+.auto-tag-hint.show{
+  display:block;
+}
+
+.auto-tag-hint button{
+  margin-top:8px;
+  padding:8px 10px;
+  border-radius:10px;
+  background:#fed7aa;
+  color:#7c2d12;
+  font-size:14px;
+  font-weight:900;
+}
+
 textarea{
   width:100%;
   min-height:130px;
@@ -939,6 +1049,59 @@ textarea{
           <button class="report-choice" onclick="pickStatus(this,'☎️ 電訪 / 沒遇到')">☎️ 電訪 / 沒遇到</button>
         </div>
         <div class="report-note-area" id="reportNoteArea">
+          <div class="note-label">接觸類型</div>
+          <div class="contact-type-grid" id="contactTypeGrid">
+            <label class="contact-type-option">
+              <input type="radio" name="contactType" value="日常拜訪 / 電話 / LINE" checked>
+              <span>日常拜訪 / 電話 / LINE</span>
+            </label>
+            <label class="contact-type-option">
+              <input type="radio" name="contactType" value="收款">
+              <span>收款</span>
+            </label>
+            <label class="contact-type-option">
+              <input type="radio" name="contactType" value="其他">
+              <span>其他</span>
+            </label>
+          </div>
+
+          <div class="note-label">快速標記</div>
+          <div class="quick-tag-tools">
+            <div class="quick-tag-toggle-grid">
+              <button type="button" class="quick-tag-toggle" data-tag-toggle="opportunity" onclick="toggleQuickTagPanel('opportunity')">＋機會</button>
+              <button type="button" class="quick-tag-toggle" data-tag-toggle="risk" onclick="toggleQuickTagPanel('risk')">＋異常</button>
+              <button type="button" class="quick-tag-toggle" data-tag-toggle="customerChange" onclick="toggleQuickTagPanel('customerChange')">＋客戶變化</button>
+            </div>
+
+            <div class="quick-tag-panel" data-tag-panel="opportunity">
+              <div class="quick-tag-options">
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="opportunity" value="技術 / 資訊支援需求">技術 / 資訊支援需求</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="opportunity" value="設備工具需求">設備工具需求</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="opportunity" value="油品機會">油品機會</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="opportunity" value="電池機會">電池機會</label>
+              </div>
+            </div>
+
+            <div class="quick-tag-panel" data-tag-panel="risk">
+              <div class="quick-tag-options">
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="risk" value="競品入侵">競品入侵</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="risk" value="客訴">客訴</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="risk" value="不良品">不良品</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="risk" value="收款風險">收款風險</label>
+              </div>
+            </div>
+
+            <div class="quick-tag-panel" data-tag-panel="customerChange">
+              <div class="quick-tag-options">
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="customerChange" value="人員異動">人員異動</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="customerChange" value="新增 / 汰換設備">新增 / 汰換設備</label>
+                <label class="quick-tag-option"><input type="checkbox" data-tag-group="customerChange" value="營業狀態變化">營業狀態變化</label>
+              </div>
+            </div>
+
+            <div class="auto-tag-hint" id="autoTagHint"></div>
+          </div>
+
           <div class="note-label">補充說明</div>
           <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
           <button class="send" id="sendReportBtn" onclick="submitReport()">送出回報</button>
@@ -1083,6 +1246,7 @@ const quickModalBody=document.getElementById('quickModalBody');
 const reportNoteArea=document.getElementById('reportNoteArea');
 const reportNote=document.getElementById('reportNote');
 const sendReportBtn=document.getElementById('sendReportBtn');
+const autoTagHint=document.getElementById('autoTagHint');
 const locationSearchInput=document.getElementById('locationSearch');
 const locationClearBtn=document.getElementById('locationClearBtn');
 const locationResults=document.getElementById('locationResults');
@@ -1092,6 +1256,26 @@ const locationNote=document.getElementById('locationNote');
 const getLocationBtn=document.getElementById('getLocationBtn');
 const saveLocationBtn=document.getElementById('saveLocationBtn');
 const locationMessage=document.getElementById('locationMessage');
+
+const QUICK_TAG_GROUP_LABELS={
+  opportunity:'機會',
+  risk:'異常',
+  customerChange:'客戶變化'
+};
+
+const AUTO_TAG_RULES=[
+  {tag:'技術 / 資訊支援需求',group:'opportunity',words:['保養資料庫','資料庫','診斷','電腦','原廠電腦','雙B','VAG','故障碼','技術','查資料','教育','培訓','維修資料']},
+  {tag:'設備工具需求',group:'opportunity',words:['冷媒','冷媒回收','四輪定位','定位機','頂高機','工具','設備','機台','儀器','檢測器','充電機']},
+  {tag:'油品機會',group:'opportunity',words:['機油','油品','變速箱油','齒輪油','煞車油','ATF','CVT','換油','油價','油種','認證']},
+  {tag:'電池機會',group:'opportunity',words:['電池','電瓶','AGM','EFB','啟停','寄賣','車隊電池']},
+  {tag:'競品入侵',group:'risk',words:['別家','競品','別人報價','比較便宜','低價','黑罐','被搶','換別家']},
+  {tag:'客訴',group:'risk',words:['客訴','抱怨','不滿','投訴','生氣','價格抱怨','服務不好']},
+  {tag:'不良品',group:'risk',words:['不良','故障','瑕疵','退貨','換貨','漏油','壞掉','電池異常']},
+  {tag:'收款風險',group:'risk',words:['欠款','貨款','支票','票','收款','拖款','月底再說','沒錢','延遲付款']},
+  {tag:'人員異動',group:'customerChange',words:['換老闆','新老闆','兒子接手','換店長','換技師','離職','新人','技師異動']},
+  {tag:'新增 / 汰換設備',group:'customerChange',words:['新買','新增','汰換','換設備','新設備','新機台','擴充','新增頂高機']},
+  {tag:'營業狀態變化',group:'customerChange',words:['搬家','歇業','頂讓','分店','縮小','擴大','休息','停業','營業時間','轉型']}
+];
 
 syncViewport();
 window.addEventListener('resize',syncViewport);
@@ -1143,10 +1327,21 @@ reportNote.addEventListener('focus',enterInputMode);
 reportNote.addEventListener('blur',leaveInputMode);
 reportNote.addEventListener('input',function(){
   scheduleReportNoteScroll(false);
+  updateAutoTagHint();
 });
 
 sendReportBtn.addEventListener('touchstart',markReportSubmitTap);
 sendReportBtn.addEventListener('mousedown',markReportSubmitTap);
+
+document.querySelectorAll('[data-tag-group]').forEach(function(input){
+  input.addEventListener('change',function(){
+    enforceQuickTagLimit(this);
+    updateQuickTagCounts();
+    updateAutoTagHint();
+  });
+});
+
+updateQuickTagCounts();
 
 function syncViewport(){
   let h=window.innerHeight;
@@ -3017,6 +3212,7 @@ function openCustomerDetail(customer){
   });
 
   document.getElementById('reportNote').value='';
+  resetQuickReportTags();
   hideReportNoteArea();
   resetReportButton();
   document.getElementById('detailView').classList.remove('input-mode');
@@ -3116,6 +3312,158 @@ function getValidDays(value){
   return isFinite(days) ? days : null;
 }
 
+function toggleQuickTagPanel(group){
+  const panel=document.querySelector('[data-tag-panel="'+group+'"]');
+  const toggle=document.querySelector('[data-tag-toggle="'+group+'"]');
+
+  if(!panel){
+    return;
+  }
+
+  panel.classList.toggle('show');
+
+  if(toggle){
+    toggle.classList.toggle('active',panel.classList.contains('show'));
+  }
+}
+
+function getSelectedContactType(){
+  const checked=document.querySelector('input[name="contactType"]:checked');
+  return checked ? checked.value : '日常拜訪 / 電話 / LINE';
+}
+
+function getQuickTags(group){
+  return Array.from(document.querySelectorAll('[data-tag-group="'+group+'"]:checked')).map(function(input){
+    return input.value;
+  });
+}
+
+function enforceQuickTagLimit(input){
+  const group=input.getAttribute('data-tag-group');
+
+  if(!group || !input.checked){
+    return;
+  }
+
+  const checked=Array.from(document.querySelectorAll('[data-tag-group="'+group+'"]:checked'));
+
+  if(checked.length>2){
+    input.checked=false;
+    alert((QUICK_TAG_GROUP_LABELS[group]||'此類標記')+'最多勾選 2 個');
+  }
+}
+
+function updateQuickTagCounts(){
+  Object.keys(QUICK_TAG_GROUP_LABELS).forEach(function(group){
+    const btn=document.querySelector('[data-tag-toggle="'+group+'"]');
+    const count=getQuickTags(group).length;
+    const prefix=count ? '' : '＋';
+
+    if(btn){
+      btn.textContent=prefix+QUICK_TAG_GROUP_LABELS[group]+' '+count;
+    }
+  });
+}
+
+function resetQuickReportTags(){
+  const defaultContact=document.querySelector('input[name="contactType"][value="日常拜訪 / 電話 / LINE"]');
+
+  if(defaultContact){
+    defaultContact.checked=true;
+  }
+
+  document.querySelectorAll('[data-tag-group]').forEach(function(input){
+    input.checked=false;
+  });
+  document.querySelectorAll('.quick-tag-panel').forEach(function(panel){
+    panel.classList.remove('show');
+  });
+  document.querySelectorAll('.quick-tag-toggle').forEach(function(btn){
+    btn.classList.remove('active');
+  });
+
+  if(autoTagHint){
+    autoTagHint.classList.remove('show');
+    autoTagHint.innerHTML='';
+  }
+
+  updateQuickTagCounts();
+}
+
+function detectAutoReportTags(note){
+  const text=String(note||'').toLowerCase();
+  const detected=[];
+
+  if(!text){
+    return detected;
+  }
+
+  AUTO_TAG_RULES.forEach(function(rule){
+    const matched=rule.words.some(function(word){
+      return text.indexOf(String(word).toLowerCase())!==-1;
+    });
+
+    if(matched && detected.indexOf(rule.tag)===-1){
+      detected.push(rule.tag);
+    }
+  });
+
+  return detected;
+}
+
+function updateAutoTagHint(){
+  if(!autoTagHint){
+    return;
+  }
+
+  const detected=detectAutoReportTags(reportNote.value);
+
+  if(!detected.length){
+    autoTagHint.classList.remove('show');
+    autoTagHint.innerHTML='';
+    return;
+  }
+
+  autoTagHint.classList.add('show');
+  autoTagHint.innerHTML='偵測到可能標籤：'+detected.map(escapeHtml).join('、')+
+    '<br><button type="button" onclick="applyDetectedTags()">一鍵加入</button>';
+}
+
+function applyDetectedTags(){
+  detectAutoReportTags(reportNote.value).forEach(function(tag){
+    const rule=AUTO_TAG_RULES.find(function(item){
+      return item.tag===tag;
+    });
+
+    if(!rule){
+      return;
+    }
+
+    const current=getQuickTags(rule.group);
+    const input=Array.from(document.querySelectorAll('[data-tag-group="'+rule.group+'"]')).find(function(item){
+      return item.value===tag;
+    });
+
+    if(input && !input.checked && current.length<2){
+      input.checked=true;
+    }
+
+    const panel=document.querySelector('[data-tag-panel="'+rule.group+'"]');
+    const toggle=document.querySelector('[data-tag-toggle="'+rule.group+'"]');
+
+    if(panel){
+      panel.classList.add('show');
+    }
+
+    if(toggle){
+      toggle.classList.add('active');
+    }
+  });
+
+  updateQuickTagCounts();
+  updateAutoTagHint();
+}
+
 function pickStatus(btn,status){
   selectedStatus=status;
 
@@ -3173,8 +3521,8 @@ function submitReport(){
 
   const note=document.getElementById('reportNote').value.trim();
 
-  if(isNoteRequiredStatus(selectedStatus) && !note){
-    alert('這個狀態需要補一句重點，方便下次追蹤。');
+  if(!note){
+    alert('請輸入回報內容');
     showReportNoteArea();
     reportNote.focus();
     return;
@@ -3193,7 +3541,13 @@ function submitReport(){
     owner:currentCustomer.owner||'',
     region:currentCustomer.region||'',
     status:selectedStatus,
-    note:note
+    note:note,
+    contactType:getSelectedContactType(),
+    opportunityTags:getQuickTags('opportunity'),
+    riskTags:getQuickTags('risk'),
+    customerChangeTags:getQuickTags('customerChange'),
+    autoDetectedTags:detectAutoReportTags(note),
+    quickTagVersion:'v1_62'
   };
 
   if(!isWriteApiConfigured()){
