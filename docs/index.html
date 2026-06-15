@@ -245,6 +245,67 @@ button{
   line-height:1.35;
 }
 
+.supervisor-home{
+  display:none;
+  margin:10px 12px 0;
+  padding:14px;
+  border-radius:18px;
+  background:#fff7ed;
+  border:2px solid #fed7aa;
+  color:#9a3412;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.supervisor-home-title{
+  font-size:22px;
+}
+
+.supervisor-home-meta{
+  margin-top:4px;
+  font-size:16px;
+  line-height:1.35;
+}
+
+.supervisor-card{
+  margin-bottom:10px;
+  padding:12px;
+  border-radius:16px;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+}
+
+.supervisor-card-title{
+  font-size:20px;
+  font-weight:900;
+  color:#9a3412;
+}
+
+.supervisor-card-meta,
+.supervisor-card-content{
+  margin-top:6px;
+  color:#7c2d12;
+  font-size:16px;
+  line-height:1.45;
+  word-break:break-word;
+}
+
+.supervisor-actions{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  margin-top:10px;
+}
+
+.supervisor-action{
+  min-height:44px;
+  border-radius:14px;
+  background:#fed7aa;
+  color:#7c2d12;
+  font-size:16px;
+  font-weight:900;
+}
+
 .quick-modal{
   display:none;
   position:fixed;
@@ -956,6 +1017,11 @@ textarea{
       <div class="draft-reminder-meta" id="draftReminderMeta">點擊補完拜訪內容</div>
     </section>
 
+    <section class="supervisor-home" id="supervisorHome" onclick="openSupervisorReminders()">
+      <div class="supervisor-home-title" id="supervisorHomeTitle">主管提醒：待處理 0 / 今日到期 0</div>
+      <div class="supervisor-home-meta" id="supervisorHomeMeta">點擊查看主管提醒</div>
+    </section>
+
     <section class="visit-due-section" id="visitDueSection">
       <div class="visit-due-head">
         <div class="visit-due-title">本日提醒</div>
@@ -1046,6 +1112,11 @@ textarea{
             <span class="badge badge-red" id="detailBadge">未回報</span>
           </div>
         </div>
+      </div>
+
+      <div class="section" id="customerSupervisorSection" style="display:none">
+        <div class="section-title">主管提醒</div>
+        <div id="customerSupervisorReminders"></div>
       </div>
 
       <div class="section report-section">
@@ -1243,6 +1314,8 @@ let currentVisitDraft=null;
 let isCreatingVisitDraft=false;
 let isCompletingVisitDraft=false;
 let isVoidingVisitDraft=false;
+let supervisorReminders=[];
+let isUpdatingSupervisorReminder=false;
 
 const searchInput=document.getElementById('search');
 const clearBtn=document.getElementById('clearBtn');
@@ -1250,6 +1323,9 @@ const quickHomeActions=document.getElementById('quickHomeActions');
 const draftReminder=document.getElementById('draftReminder');
 const draftReminderTitle=document.getElementById('draftReminderTitle');
 const draftReminderMeta=document.getElementById('draftReminderMeta');
+const supervisorHome=document.getElementById('supervisorHome');
+const supervisorHomeTitle=document.getElementById('supervisorHomeTitle');
+const supervisorHomeMeta=document.getElementById('supervisorHomeMeta');
 const quickReportModal=document.getElementById('quickReportModal');
 const quickModalTitle=document.getElementById('quickModalTitle');
 const quickModalBody=document.getElementById('quickModalBody');
@@ -1838,6 +1914,7 @@ function loadRealCustomersAttempt(mode,attempt){
     renderVisitDueList(mode);
     updateQuickReportHome(mode);
     loadPendingVisitDrafts();
+    loadSupervisorReminders();
     renderLocationResults();
     resetLocationMessageAfterCustomersLoaded();
     syncViewport();
@@ -1982,6 +2059,165 @@ function renderDraftReminder(){
   draftReminder.style.display='block';
   draftReminderTitle.innerText='待補回報 '+pendingVisitDrafts.length+' 筆';
   draftReminderMeta.innerText='點擊補完拜訪內容';
+}
+
+function loadSupervisorReminders(){
+  const mode=getMode();
+
+  if((mode!=='north' && mode!=='south') || !isWriteApiConfigured()){
+    supervisorReminders=[];
+    renderSupervisorReminderHome();
+    return;
+  }
+
+  jsonp({
+    action:'getSalesSupervisorReminders',
+    token:API_TOKEN,
+    payload:JSON.stringify({mode:mode})
+  }).then(function(data){
+    supervisorReminders=Array.isArray(data&&data.rows)?data.rows:[];
+    renderSupervisorReminderHome(data||{});
+    renderCustomerSupervisorReminders();
+  }).catch(function(err){
+    supervisorReminders=[];
+    renderSupervisorReminderHome({error:err.message});
+  });
+}
+
+function renderSupervisorReminderHome(summary){
+  const mode=getMode();
+
+  if(!supervisorHome || mode!=='north' && mode!=='south' || isHomeSearchActive()){
+    if(supervisorHome){
+      supervisorHome.style.display='none';
+    }
+    return;
+  }
+
+  const pending=supervisorReminders.length;
+  const dueToday=summary && typeof summary.dueTodayCount!=='undefined'
+    ? Number(summary.dueTodayCount||0)
+    : supervisorReminders.filter(function(row){return row.isDueToday;}).length;
+
+  supervisorHome.style.display=pending ? 'block' : 'none';
+  supervisorHomeTitle.innerText='主管提醒：待處理 '+pending+' / 今日到期 '+dueToday;
+  supervisorHomeMeta.innerText=summary&&summary.error ? '主管提醒載入失敗：'+summary.error : '點擊查看主管提醒';
+}
+
+function openSupervisorReminders(){
+  if(!supervisorReminders.length){
+    return;
+  }
+
+  openQuickReportModal('主管提醒',
+    '<div class="quick-card">'+supervisorReminders.map(renderSupervisorReminderCard).join('')+'</div>'
+  );
+}
+
+function getCustomerSupervisorReminders(){
+  if(!currentCustomer){
+    return [];
+  }
+
+  const code=String(currentCustomer.customerCode||'').trim();
+  const name=String(currentCustomer.customerName||'').trim();
+
+  return supervisorReminders.filter(function(row){
+    return (code && row.customerCode===code) || (name && row.customerName===name);
+  });
+}
+
+function renderCustomerSupervisorReminders(){
+  const section=document.getElementById('customerSupervisorSection');
+  const box=document.getElementById('customerSupervisorReminders');
+
+  if(!section || !box || !currentCustomer){
+    return;
+  }
+
+  const rows=getCustomerSupervisorReminders();
+  section.style.display=rows.length ? 'block' : 'none';
+  box.innerHTML=rows.map(renderSupervisorReminderCard).join('');
+}
+
+function renderSupervisorReminderCard(row){
+  return '<div class="supervisor-card">'+
+    '<div class="supervisor-card-title">'+escapeHtml(row.supervisorTitle||'主管提醒')+'</div>'+
+    '<div class="supervisor-card-meta">'+escapeHtml(row.customerName||'')+'｜重要 '+escapeHtml(row.importance||'B')+'｜追蹤 '+escapeHtml(row.nextFollowUpDate||'未排程')+'｜'+escapeHtml(row.supervisorStatus||'待處理')+'</div>'+
+    '<div class="supervisor-card-content">'+escapeHtml(row.supervisorContent||'')+'</div>'+
+    '<div class="supervisor-actions">'+
+      '<button class="supervisor-action" onclick="markSupervisorReminderRead(&quot;'+escapeAttr(row.replyId||'')+'&quot;)">已讀</button>'+
+      '<button class="supervisor-action" onclick="replySupervisorReminder(&quot;'+escapeAttr(row.replyId||'')+'&quot;)">回覆</button>'+
+      '<button class="supervisor-action" onclick="completeSupervisorReminder(&quot;'+escapeAttr(row.replyId||'')+'&quot;)">回報已處理</button>'+
+    '</div>'+
+  '</div>';
+}
+
+function updateSupervisorReminder(action,payload){
+  if(isUpdatingSupervisorReminder){
+    return Promise.reject(new Error('主管提醒更新中'));
+  }
+
+  isUpdatingSupervisorReminder=true;
+
+  return jsonp({
+    action:action,
+    token:API_TOKEN,
+    payload:JSON.stringify(payload||{})
+  }).then(function(res){
+    loadSupervisorReminders();
+    return res;
+  }).finally(function(){
+    isUpdatingSupervisorReminder=false;
+  });
+}
+
+function markSupervisorReminderRead(replyId){
+  if(!replyId){
+    return;
+  }
+
+  updateSupervisorReminder('markSupervisorReminderRead',{replyId:replyId}).then(function(){
+    alert('已標記已讀');
+  }).catch(function(err){
+    alert('更新失敗：'+err.message);
+  });
+}
+
+function replySupervisorReminder(replyId){
+  if(!replyId){
+    return;
+  }
+
+  const reply=prompt('請輸入業務回覆內容','');
+
+  if(!reply){
+    return;
+  }
+
+  updateSupervisorReminder('replySupervisorReminder',{replyId:replyId,replyContent:reply}).then(function(){
+    alert('已送出回覆');
+  }).catch(function(err){
+    alert('回覆失敗：'+err.message);
+  });
+}
+
+function completeSupervisorReminder(replyId){
+  if(!replyId){
+    return;
+  }
+
+  const note=prompt('請輸入處理說明','');
+
+  if(!note){
+    return;
+  }
+
+  updateSupervisorReminder('completeSupervisorReminder',{replyId:replyId,completionNote:note}).then(function(){
+    alert('已回報處理，等待 Boss 確認');
+  }).catch(function(err){
+    alert('回報失敗：'+err.message);
+  });
 }
 
 function startQuickReport(){
@@ -3145,6 +3381,7 @@ function isHomeSearchActive(){
 
 function updateSearchFocusReminderVisibility(){
   renderDraftReminder();
+  renderSupervisorReminderHome();
   renderVisitDueList(getMode());
 }
 
@@ -3331,6 +3568,7 @@ function renderDetail(){
   document.getElementById('historyPanel').style.display='none';
   document.getElementById('phonePanel').innerHTML='';
   document.getElementById('historyPanel').innerHTML='';
+  renderCustomerSupervisorReminders();
 }
 
 function getSubText(c){
