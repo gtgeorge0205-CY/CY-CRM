@@ -95,6 +95,8 @@
       position:relative;
       overflow:hidden;
     }
+    .metric.clickable{cursor:pointer}
+    .metric.clickable:hover{border-color:rgba(0,229,192,.56);transform:translateY(-1px)}
     .metric:after{
       content:"";
       position:absolute;
@@ -142,6 +144,24 @@
     .case-placeholder{display:grid;gap:10px}
     .case-placeholder-title{font-size:19px;font-weight:950;color:#fff}
     .case-placeholder-copy{color:var(--silver);font-size:13px;line-height:1.7}
+    .system-data{margin-top:10px;border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.024);padding:10px;color:var(--silver);font-size:13px}
+    .drilldown{display:none;margin-top:10px}
+    .drilldown.show{display:block}
+    .drilldown-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+    .drilldown-title{font-size:18px;font-weight:950;color:#fff}
+    .drilldown-meta{font-size:12px;color:var(--muted);line-height:1.6;margin-top:4px}
+    .detail-list,.case-list,.reminder-list{display:grid;gap:9px}
+    .detail-card,.case-card,.reminder-card{border:1px solid var(--line-soft);border-left:4px solid rgba(0,229,192,.34);border-radius:8px;background:rgba(255,255,255,.026);padding:11px;line-height:1.55}
+    .case-card.important,.reminder-card.important{border-left-color:var(--yellow);background:rgba(250,204,21,.06)}
+    .case-card.overdue,.reminder-card.overdue{border-left-color:var(--red);background:rgba(248,113,113,.07)}
+    .mini-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:10px}
+    .mini-stat{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:9px;cursor:pointer}
+    .mini-stat strong{display:block;color:#fff;font-size:24px}
+    .mini-stat span{font-size:12px;color:var(--muted);font-weight:900}
+    .form-check{display:flex;align-items:center;gap:8px;color:#fff;font-weight:900;margin:8px 0}
+    .form-check input{width:18px;height:18px}
+    .form-panel{display:none;border:1px solid var(--line-soft);border-radius:8px;padding:10px;background:rgba(255,255,255,.024)}
+    .form-panel.show{display:grid;gap:8px}
     .panel{padding:12px}
     .split{display:grid;grid-template-columns:1fr;gap:10px}
     .sector-grid{display:grid;grid-template-columns:1fr;gap:9px}
@@ -383,6 +403,8 @@
         </div>
       </div>
       <div class="grid" id="metricGrid"></div>
+      <div class="system-data" id="systemDataStatus"></div>
+      <div class="panel drilldown" id="bossDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -404,6 +426,15 @@
 
       <div class="section-head section">
         <div>
+          <div class="section-kicker">主管提醒</div>
+          <h2 class="section-title">主管提醒</h2>
+          <div class="section-desc">已發布給業務、等待已讀 / 回覆 / 回報已處理的提醒。</div>
+        </div>
+      </div>
+      <div class="panel" id="supervisorReminderBoard"></div>
+
+      <div class="section-head section">
+        <div>
           <div class="section-kicker">訊號雷達</div>
           <h2 class="section-title">訊號雷達</h2>
           <div class="section-desc">有事情發生，但不一定要處理；需要盯的訊號可加入短追蹤。</div>
@@ -415,14 +446,10 @@
         <div>
           <div class="section-kicker">客戶案件</div>
           <h2 class="section-title">客戶案件</h2>
-          <div class="section-desc">需要連續追蹤、有負責人、有狀態與結果的事項，下一版再正式啟用。</div>
+          <div class="section-desc">需要連續追蹤、有負責人、有狀態與結果的事項。</div>
         </div>
       </div>
-      <div class="panel case-placeholder">
-        <div class="case-placeholder-title">客戶案件｜下一版開放</div>
-        <div class="case-placeholder-copy">適合需要多次追蹤、有負責人、有狀態、有結果的商機或問題，例如設備需求、競品搶客、收款風險、重大客訴。</div>
-        <div class="actions"><button class="action" disabled>建立案件（下一版）</button></div>
-      </div>
+      <div class="panel" id="customerCaseBoard"></div>
 
       <div class="section-head section">
         <div>
@@ -516,6 +543,67 @@
     </div>
   </div>
 
+  <div class="thread-modal" id="caseModal" aria-hidden="true">
+    <div class="thread-panel">
+      <div class="thread-head">
+        <div>
+          <div class="section-kicker">客戶案件</div>
+          <div class="thread-title" id="caseModalTitle">建立客戶案件</div>
+        </div>
+        <button class="thread-close" onclick="closeCaseModal()">×</button>
+      </div>
+      <div class="reply-form">
+        <input class="form-control" id="caseTitle" placeholder="案件標題">
+        <div class="form-row">
+          <input class="form-control" id="caseCustomerName" placeholder="客戶名稱">
+          <input class="form-control" id="caseOwner" placeholder="負責業務">
+        </div>
+        <div class="form-row">
+          <select class="form-control" id="caseType">
+            <option value="商機">商機</option>
+            <option value="異常">異常</option>
+            <option value="客戶變化">客戶變化</option>
+            <option value="收款風險">收款風險</option>
+            <option value="技術支援">技術支援</option>
+            <option value="設備工具">設備工具</option>
+            <option value="其他">其他</option>
+          </select>
+          <select class="form-control" id="caseStatus">
+            <option value="新案件">新案件</option>
+            <option value="洽談中">洽談中</option>
+            <option value="等待客戶">等待客戶</option>
+            <option value="等待廠商">等待廠商</option>
+            <option value="已報價">已報價</option>
+            <option value="成交">成交</option>
+            <option value="失敗">失敗</option>
+            <option value="暫緩">暫緩</option>
+            <option value="結案">結案</option>
+          </select>
+          <select class="form-control" id="caseImportance">
+            <option value="B">重要程度 B</option>
+            <option value="A">重要程度 A</option>
+            <option value="C">重要程度 C</option>
+          </select>
+        </div>
+        <textarea class="form-control" id="caseContent" placeholder="案件內容"></textarea>
+        <div class="form-row">
+          <input class="form-control" id="caseNextFollowDate" type="date">
+          <input class="form-control" id="caseEstimatedAmount" placeholder="預估金額">
+          <input class="form-control" id="caseEstimatedProfit" placeholder="預估毛利">
+        </div>
+        <textarea class="form-control" id="caseNote" placeholder="備註 / 結案結果"></textarea>
+        <input type="hidden" id="caseId">
+        <input type="hidden" id="caseCustomerCode">
+        <input type="hidden" id="caseSource">
+        <input type="hidden" id="caseReportId">
+        <input type="hidden" id="caseReplyId">
+        <div class="actions">
+          <button class="action action-secondary" id="caseSaveBtn" onclick="saveCustomerCaseFromModal()">儲存案件</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     const API_BASE='https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
     const API_TOKEN='CYCRM_2026_write_test';
@@ -574,12 +662,15 @@
       setMessage('');
       document.getElementById('generatedAt').textContent=data.generatedAt||'';
       renderMetrics(data.operationSummary||{});
+      renderSystemDataStatus(data.operationSummary||{});
       renderSignalFunnel(data);
       renderOwnerSummary(data.ownerSummary||[]);
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
       renderSalesSummary(data.salesSummary||{});
       renderFollowupBoard(data.followupBoard||{});
+      renderSupervisorReminderBoard(data.supervisorReminderSummary||{});
+      renderCustomerCaseBoard(data.customerCaseSummary||{});
       renderQuickTagSummary(data.quickTagSummary||{});
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
@@ -587,19 +678,37 @@
 
     function renderMetrics(summary){
       const items=[
-        {label:'今日回報',value:toMetricNumber(summary.todayReportCount),note:'正式業務回報'},
-        {label:'待補回報',value:toMetricNumber(summary.pendingDraftCount),note:'需要業務補內容'},
-        {label:'待指定客戶',value:toMetricNumber(summary.unmatchedDraftCount),note:'需管理端處理',warning:toMetricNumber(summary.unmatchedDraftCount)>0},
-        {label:'已確認座標',value:toMetricNumber(summary.coordinateConfirmedCount),note:'可用於快速回報'}
+        {label:'今日回報',value:toMetricNumber(summary.todayReportCount),note:'正式業務回報',type:'reports',filter:'today'},
+        {label:'待補回報',value:toMetricNumber(summary.pendingDraftCount),note:'需要業務補內容',type:'reports',filter:'pendingDrafts',warning:toMetricNumber(summary.pendingDraftCount)>0},
+        {label:'待指定客戶',value:toMetricNumber(summary.unmatchedDraftCount),note:'需管理端處理',type:'reports',filter:'pendingAssignedCustomers',warning:toMetricNumber(summary.unmatchedDraftCount)>0},
+        {label:'訊號雷達',value:toMetricNumber(summary.signalRadarCount),note:'近30天機會 / 異常 / 變化',type:'signals',filter:'all'},
+        {label:'短追蹤',value:toMetricNumber(summary.shortFollowupCount),note:'未完成待追蹤',type:'followups',filter:'all'},
+        {label:'主管提醒',value:toMetricNumber(summary.supervisorReminderCount),note:'已發布未完成',type:'reminders',filter:'allOpen'},
+        {label:'客戶案件',value:toMetricNumber(summary.customerCaseCount),note:'未結案案件',type:'cases',filter:'allOpen'},
+        {label:'A級重要',value:toMetricNumber(summary.importantACount),note:'短追蹤 / 提醒 / 案件',type:'all',filter:'importantA',warning:toMetricNumber(summary.importantACount)>0},
+        {label:'今日到期',value:toMetricNumber(summary.dueTodayCount),note:'今日需確認',type:'all',filter:'dueToday',warning:toMetricNumber(summary.dueTodayCount)>0},
+        {label:'逾期',value:toMetricNumber(summary.overdueCount),note:'已超過追蹤日',type:'all',filter:'overdue',warning:toMetricNumber(summary.overdueCount)>0}
       ];
 
       document.getElementById('metricGrid').innerHTML=items.map(function(item){
-        return '<div class="metric '+(item.warning?'warning':'')+'">'+
+        return '<div class="metric clickable '+(item.warning?'warning':'')+'" data-drill-type="'+escapeAttr(item.type)+'" data-drill-filter="'+escapeAttr(item.filter)+'">'+
           '<div class="metric-label">'+escapeHtml(item.label)+'</div>'+
           '<div class="metric-value">'+escapeHtml(formatMetricValue(item.value))+'</div>'+
           '<div class="metric-note">'+escapeHtml(item.note)+'</div>'+
         '</div>';
       }).join('');
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-drill-type]'),function(card){
+        card.addEventListener('click',function(){
+          openBossDrilldown(card.getAttribute('data-drill-type'),card.getAttribute('data-drill-filter'));
+        });
+      });
+    }
+
+    function renderSystemDataStatus(summary){
+      document.getElementById('systemDataStatus').innerHTML=
+        '<b>系統資料狀態 / 資料完整度</b>｜已確認座標 '+num(summary.coordinateConfirmedCount||0)+
+        '｜自動座標 '+num(summary.coordinateAutoCount||0);
     }
 
     function renderSignalFunnel(data){
@@ -610,6 +719,7 @@
 
       const quick=data&&data.quickTagSummary?data.quickTagSummary:{};
       const followup=data&&data.followupBoard?data.followupBoard:{};
+      const cases=data&&data.customerCaseSummary?data.customerCaseSummary:{};
       const groups=Array.isArray(quick.groups)?quick.groups:[];
       const counts=getSignalRadarCounts(groups,quick.totalCount);
       const activeFollowups=Array.isArray(followup.items)
@@ -617,22 +727,22 @@
         : Number(followup.totalCount||0);
 
       target.innerHTML=
-        '<div class="funnel-card signal">'+
+        '<div class="funnel-card signal clickable" onclick="openBossDrilldown(\'signals\',\'all\')">'+
           '<div class="funnel-label">第一層｜訊號雷達</div>'+
           '<div class="funnel-value">近30天 '+num(counts.total)+' 筆</div>'+
           '<div class="funnel-meta">機會 '+num(counts.opportunity)+'｜異常 '+num(counts.risk)+'｜客戶變化 '+num(counts.change)+'</div>'+
         '</div>'+
         '<div class="funnel-flow">↓</div>'+
-        '<div class="funnel-card followup">'+
+        '<div class="funnel-card followup clickable" onclick="openBossDrilldown(\'followups\',\'all\')">'+
           '<div class="funnel-label">第二層｜短追蹤</div>'+
           '<div class="funnel-value">'+num(activeFollowups)+' 筆</div>'+
           '<div class="funnel-meta">逾期 '+num(followup.overdueCount||0)+'｜今日到期 '+num(followup.dueTodayCount||0)+'｜需追蹤 '+num(followup.trackingCount||0)+'</div>'+
         '</div>'+
         '<div class="funnel-flow">↓</div>'+
-        '<div class="funnel-card case">'+
+        '<div class="funnel-card case clickable" onclick="openBossDrilldown(\'cases\',\'allOpen\')">'+
           '<div class="funnel-label">第三層｜客戶案件</div>'+
-          '<div class="funnel-value">尚未啟用</div>'+
-          '<div class="funnel-meta">下一版開放，預留正式案件 / 專案入口。</div>'+
+          '<div class="funnel-value">'+num(cases.totalCount||0)+' 筆</div>'+
+          '<div class="funnel-meta">A級 '+num(cases.aLevelCount||0)+'｜逾期 '+num(cases.overdueCount||0)+'｜今日到期 '+num(cases.dueTodayCount||0)+'</div>'+
         '</div>';
     }
 
@@ -769,6 +879,7 @@
         });
       });
       bindReportThreadButtons(target);
+      bindCaseButtons(target);
     }
 
     function filterFollowupRows(rows,filter){
@@ -816,7 +927,109 @@
         '<div class="followup-copy"><b>最新回覆</b> '+escapeHtml(replyText)+'</div>'+
         '<div class="actions">'+
           '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
-          '<button class="action" disabled>升級案件（下一版）</button>'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">建立主管提醒</button>'+
+          '<button class="action action-secondary" data-case-followup="'+escapeAttr(row.replyId||'')+'">升級案件</button>'+
+          '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
+        '</div>'+
+      '</div>';
+    }
+
+    function renderSupervisorReminderBoard(summary){
+      const target=document.getElementById('supervisorReminderBoard');
+      summary=summary||{};
+      const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const stats=[
+        {label:'未完成',value:summary.totalCount||0,filter:'allOpen'},
+        {label:'未讀',value:summary.unreadCount||0,filter:'unread'},
+        {label:'待 Boss 確認',value:summary.pendingBossConfirmCount||0,filter:'pendingBossConfirm'},
+        {label:'逾期',value:summary.overdueCount||0,filter:'overdue'}
+      ];
+
+      target.innerHTML=
+        '<div class="mini-summary">'+stats.map(function(item){
+          return '<div class="mini-stat" data-reminder-filter="'+escapeAttr(item.filter)+'"><span>'+escapeHtml(item.label)+'</span><strong>'+num(item.value)+'</strong></div>';
+        }).join('')+'</div>'+
+        (rows.length
+          ? '<div class="reminder-list">'+rows.slice(0,8).map(renderSupervisorReminderCard).join('')+'</div>'
+          : '<div class="empty">目前沒有未完成主管提醒。</div>');
+
+      Array.prototype.forEach.call(target.querySelectorAll('[data-reminder-filter]'),function(btn){
+        btn.addEventListener('click',function(){
+          openBossDrilldown('reminders',btn.getAttribute('data-reminder-filter'));
+        });
+      });
+      bindReportThreadButtons(target);
+      bindCaseButtons(target);
+    }
+
+    function renderSupervisorReminderCard(row){
+      const cls=row.isOverdue?'reminder-card overdue':(row.importance==='A'?'reminder-card important':'reminder-card');
+
+      return '<div class="'+cls+'">'+
+        '<div class="followup-title"><span>'+escapeHtml(row.supervisorTitle||'主管提醒')+'</span><span class="reply-chip">'+escapeHtml(row.supervisorStatus||'待處理')+'</span></div>'+
+        '<div class="followup-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜追蹤 '+escapeHtml(row.nextFollowUpDate||'未排程')+'</div>'+
+        '<div class="followup-copy">'+escapeHtml(trimText(row.supervisorContent||'',120))+'</div>'+
+        '<div class="reply-state">'+
+          (row.salesReadAt?'<span class="reply-chip done">已讀 '+escapeHtml(row.salesReadAt)+'</span>':'<span class="reply-chip">尚未已讀</span>')+
+          (row.salesReplyContent?'<span class="reply-chip done">業務已回覆</span>':'')+
+          (row.salesCompletedAt?'<span class="reply-chip hot">待 Boss 確認</span>':'')+
+        '</div>'+
+        (row.salesReplyContent?'<div class="followup-copy"><b>業務回覆</b> '+escapeHtml(row.salesReplyContent)+'</div>':'')+
+        (row.salesCompletionNote?'<div class="followup-copy"><b>處理說明</b> '+escapeHtml(row.salesCompletionNote)+'</div>':'')+
+        '<div class="actions">'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看提醒</button>'+
+          '<button class="action action-secondary" onclick="bossConfirmSupervisorReminder(\''+escapeAttr(row.replyId||'')+'\')">標記 Boss 已確認</button>'+
+          '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
+        '</div>'+
+      '</div>';
+    }
+
+    function renderCustomerCaseBoard(summary){
+      const target=document.getElementById('customerCaseBoard');
+      summary=summary||{};
+      const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const stats=[
+        {label:'未結案',value:summary.totalCount||0,filter:'allOpen'},
+        {label:'A級案件',value:summary.aLevelCount||0,filter:'importantA'},
+        {label:'今日到期',value:summary.dueTodayCount||0,filter:'dueToday'},
+        {label:'逾期',value:summary.overdueCount||0,filter:'overdue'}
+      ];
+
+      target.innerHTML=
+        '<div class="mini-summary">'+stats.map(function(item){
+          return '<div class="mini-stat" data-case-filter="'+escapeAttr(item.filter)+'"><span>'+escapeHtml(item.label)+'</span><strong>'+num(item.value)+'</strong></div>';
+        }).join('')+'</div>'+
+        (rows.length
+          ? '<div class="case-list">'+rows.slice(0,10).map(renderCustomerCaseCard).join('')+'</div>'
+          : '<div class="empty">目前沒有未結案客戶案件。</div>');
+
+      Array.prototype.forEach.call(target.querySelectorAll('[data-case-filter]'),function(btn){
+        btn.addEventListener('click',function(){
+          openBossDrilldown('cases',btn.getAttribute('data-case-filter'));
+        });
+      });
+      bindCaseButtons(target);
+    }
+
+    function renderCustomerCaseCard(row){
+      const cls=row.isOverdue?'case-card overdue':(row.importance==='A'?'case-card important':'case-card');
+
+      return '<div class="'+cls+'">'+
+        '<div class="followup-title"><span>'+escapeHtml(row.title||'未命名案件')+'</span><span class="reply-chip '+(row.importance==='A'?'hot':'')+'">重要 '+escapeHtml(row.importance||'B')+'</span></div>'+
+        '<div class="followup-meta">'+
+          escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.caseType||'其他')+'｜'+escapeHtml(row.status||'新案件')+'<br>'+
+          '下次追蹤 '+escapeHtml(row.nextFollowDate||'未排程')+'｜建立 '+escapeHtml(row.createdAt||'')+'｜更新 '+escapeHtml(row.updatedAt||'')+
+        '</div>'+
+        '<div class="followup-copy">'+escapeHtml(trimText(row.content||'',130))+'</div>'+
+        '<div class="reply-state">'+
+          '<span class="reply-chip">預估金額 '+escapeHtml(row.estimatedAmount||'未填')+'</span>'+
+          '<span class="reply-chip">預估毛利 '+escapeHtml(row.estimatedProfit||'未填')+'</span>'+
+          '<span class="reply-chip '+(row.isOverdue?'hot':'')+'">'+escapeHtml(row.dueBucket||'未排程')+'</span>'+
+        '</div>'+
+        '<div class="actions">'+
+          '<button class="action action-secondary" data-case-edit="'+escapeAttr(row.caseId||'')+'">查看 / 編輯案件</button>'+
+          '<button class="action action-secondary" data-case-close="'+escapeAttr(row.caseId||'')+'">結案</button>'+
+          '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
         '</div>'+
       '</div>';
     }
@@ -847,6 +1060,7 @@
       });
       bindReportThreadButtons(target);
       bindSignalFollowupButtons(target);
+      bindCaseButtons(target);
     }
 
     function renderQuickTagGroup(group){
@@ -912,6 +1126,7 @@
         '<div class="actions">'+
           '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
           '<button class="action action-secondary" data-signal-followup="'+escapeAttr(row.reportId||'')+'">加入短追蹤</button>'+
+          '<button class="action action-secondary" data-case-signal="'+escapeAttr(row.reportId||'')+'">升級案件</button>'+
         '</div>'+
       '</div>';
     }
@@ -1547,6 +1762,11 @@
           '<div class="reply-form">'+
             '<textarea class="form-control" id="bossReplyContent" maxlength="300" placeholder="輸入給自己的處理備忘、交辦重點或追蹤原因"></textarea>'+
             '<div class="char-row"><span id="bossReplyCount">0 / 300</span></div>'+
+            '<label class="form-check"><input type="checkbox" id="createSupervisorReminder" onchange="toggleSupervisorReminderFields()">建立主管提醒</label>'+
+            '<div class="form-panel" id="supervisorReminderFields">'+
+              '<input class="form-control" id="supervisorReminderTitle" placeholder="主管提醒標題">'+
+              '<textarea class="form-control" id="supervisorReminderContent" placeholder="主管提醒內容，業務端只會看到這段文字"></textarea>'+
+            '</div>'+
             '<div class="form-row">'+
               '<select class="form-control" id="bossReplyStatus">'+
                 '<option value="未處理">未處理</option>'+
@@ -1562,13 +1782,23 @@
               '</select>'+
               '<input class="form-control" id="bossReplyNextDate" type="date">'+
             '</div>'+
-            '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存回覆</button>'+
+            '<div class="actions">'+
+              '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存回覆</button>'+
+              '<button class="action action-secondary" onclick="openCaseModalFromReportThread()">升級案件</button>'+
+            '</div>'+
           '</div>'+
         '</div>';
       const contentBox=document.getElementById('bossReplyContent');
       if(contentBox){
         contentBox.addEventListener('input',updateBossReplyCount);
+        contentBox.addEventListener('input',syncSupervisorReminderContent);
         updateBossReplyCount();
+      }
+      const supervisorContentBox=document.getElementById('supervisorReminderContent');
+      if(supervisorContentBox){
+        supervisorContentBox.addEventListener('input',function(){
+          supervisorContentBox.dataset.edited='1';
+        });
       }
       applyReplyDefaults(defaults||pendingReplyDefaults);
     }
@@ -1591,6 +1821,13 @@
       if(nextDate && defaults.nextFollowUpDate){
         nextDate.value=defaults.nextFollowUpDate;
       }
+      if(defaults.createSupervisorReminder){
+        const checkbox=document.getElementById('createSupervisorReminder');
+        if(checkbox){
+          checkbox.checked=true;
+          toggleSupervisorReminderFields();
+        }
+      }
     }
 
     function renderReplyList(replies){
@@ -1607,8 +1844,55 @@
           '</div>'+
           '<div class="report-meta">'+escapeHtml(reply.replyTime||'')+'｜'+escapeHtml(reply.replyBy||'Boss')+'</div>'+
           '<div class="report-content">'+escapeHtml(reply.content||'')+'</div>'+
+          renderSupervisorState(reply)+
         '</div>';
       }).join('')+'</div>';
+    }
+
+    function renderSupervisorState(reply){
+      if(!reply || !reply.isSupervisorReminder){
+        return '';
+      }
+
+      return '<div class="reply-state">'+
+        '<span class="reply-chip hot">已建立主管提醒</span>'+
+        '<span class="reply-chip">'+escapeHtml(reply.supervisorStatus||'待處理')+'</span>'+
+        (reply.salesReadAt?'<span class="reply-chip done">業務已讀 '+escapeHtml(reply.salesReadAt)+'</span>':'')+
+        (reply.salesReplyContent?'<span class="reply-chip done">業務回覆：'+escapeHtml(trimText(reply.salesReplyContent,40))+'</span>':'')+
+        (reply.salesCompletedAt?'<span class="reply-chip hot">完成回報 '+escapeHtml(reply.salesCompletedAt)+'</span>':'')+
+      '</div>'+
+      (reply.salesCompletionNote?'<div class="report-content">處理說明：'+escapeHtml(reply.salesCompletionNote)+'</div>':'');
+    }
+
+    function toggleSupervisorReminderFields(){
+      const checked=!!(document.getElementById('createSupervisorReminder')&&document.getElementById('createSupervisorReminder').checked);
+      const panel=document.getElementById('supervisorReminderFields');
+      const report=(activeReportThread&&activeReportThread.report)||{};
+
+      if(panel){
+        panel.classList.toggle('show',checked);
+      }
+
+      if(checked){
+        const title=document.getElementById('supervisorReminderTitle');
+        const content=document.getElementById('supervisorReminderContent');
+
+        if(title && !title.value.trim()){
+          title.value='請追蹤｜'+(report.customerName||'客戶');
+        }
+        if(content && !content.value.trim()){
+          content.value=(document.getElementById('bossReplyContent')||{}).value||'';
+        }
+      }
+    }
+
+    function syncSupervisorReminderContent(){
+      const checkbox=document.getElementById('createSupervisorReminder');
+      const content=document.getElementById('supervisorReminderContent');
+
+      if(checkbox && checkbox.checked && content && !content.dataset.edited){
+        content.value=(document.getElementById('bossReplyContent')||{}).value||'';
+      }
     }
 
     function saveBossReply(){
@@ -1641,7 +1925,10 @@
           replyContent:content,
           status:document.getElementById('bossReplyStatus').value,
           importance:document.getElementById('bossReplyImportance').value,
-          nextFollowUpDate:document.getElementById('bossReplyNextDate').value
+          nextFollowUpDate:document.getElementById('bossReplyNextDate').value,
+          createSupervisorReminder:!!(document.getElementById('createSupervisorReminder')&&document.getElementById('createSupervisorReminder').checked),
+          supervisorTitle:(document.getElementById('supervisorReminderTitle')||{}).value||'',
+          supervisorContent:(document.getElementById('supervisorReminderContent')||{}).value||''
         })
       }).then(function(result){
         const reply=result.reply||{};
@@ -1678,6 +1965,377 @@
           report.bossReplyCount=Number(report.bossReplyCount||0)+1;
         }
       });
+    }
+
+    function openBossDrilldown(type,filter){
+      const target=document.getElementById('bossDrilldown');
+      const data=dashboardData||{};
+      const detail=getDrilldownRows(type,filter);
+      const rows=detail.rows||[];
+      const shown=rows.slice(0,100);
+
+      target.classList.add('show');
+      target.innerHTML=
+        '<div class="drilldown-head">'+
+          '<div><div class="drilldown-title">'+escapeHtml(detail.title)+'</div>'+
+          '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel)+'｜筆數 '+num(rows.length)+'｜最後更新 '+escapeHtml(data.generatedAt||'')+'</div></div>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
+        '</div>'+
+        (rows.length>shown.length?'<div class="empty">目前顯示前 100 筆，請用篩選縮小範圍。</div>':'')+
+        (shown.length?'<div class="detail-list">'+shown.map(function(row){return renderDrilldownCard(detail.kind,row);}).join('')+'</div>':'<div class="empty">此條件目前沒有明細。</div>');
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+      bindReportThreadButtons(target);
+      bindSignalFollowupButtons(target);
+      bindCaseButtons(target);
+    }
+
+    function closeBossDrilldown(){
+      const target=document.getElementById('bossDrilldown');
+      target.classList.remove('show');
+      target.innerHTML='';
+    }
+
+    function getDrilldownRows(type,filter){
+      const data=dashboardData||{};
+
+      if(type==='reports' && filter==='today'){
+        return {kind:'report',title:'今日回報',filterLabel:'今天正式業務回報',rows:data.todayReports||[]};
+      }
+      if(type==='reports' && filter==='pendingDrafts'){
+        return {kind:'draft',title:'待補回報',filterLabel:'待補內容草稿',rows:data.pendingDrafts||[]};
+      }
+      if(type==='reports' && filter==='pendingAssignedCustomers'){
+        return {kind:'draft',title:'待指定客戶',filterLabel:'待管理端指定客戶',rows:data.unmatchedDrafts||[]};
+      }
+      if(type==='signals'){
+        return {kind:'signal',title:'訊號雷達',filterLabel:getSignalFilterLabel(filter),rows:filterSignalRows(collectSignalRows(),filter)};
+      }
+      if(type==='followups'){
+        return {kind:'followup',title:'短追蹤',filterLabel:getFollowupFilterLabel(filter),rows:filterFollowupDrillRows(((data.followupBoard||{}).items)||[],filter)};
+      }
+      if(type==='reminders'){
+        return {kind:'reminder',title:'主管提醒',filterLabel:getReminderFilterLabel(filter),rows:filterReminderRows(((data.supervisorReminderSummary||{}).rows)||[],filter)};
+      }
+      if(type==='cases'){
+        return {kind:'case',title:'客戶案件',filterLabel:getCaseFilterLabel(filter),rows:filterCaseRows(((data.customerCaseSummary||{}).rows)||[],filter)};
+      }
+      if(type==='all'){
+        return {
+          kind:'mixed',
+          title:filter==='importantA'?'A級重要':(filter==='dueToday'?'今日到期':'逾期'),
+          filterLabel:getCaseFilterLabel(filter),
+          rows:[]
+            .concat(filterFollowupDrillRows(((data.followupBoard||{}).items)||[],filter).map(function(row){row._kind='followup';return row;}))
+            .concat(filterReminderRows(((data.supervisorReminderSummary||{}).rows)||[],filter).map(function(row){row._kind='reminder';return row;}))
+            .concat(filterCaseRows(((data.customerCaseSummary||{}).rows)||[],filter).map(function(row){row._kind='case';return row;}))
+        };
+      }
+
+      return {kind:'empty',title:'明細檢視',filterLabel:'未指定',rows:[]};
+    }
+
+    function collectSignalRows(){
+      const groups=(((dashboardData||{}).quickTagSummary||{}).groups)||[];
+      const map={};
+
+      groups.forEach(function(group){
+        (group.tags||[]).forEach(function(tag){
+          (tag.reports||[]).forEach(function(report){
+            const id=report.reportId||[report.customerName,report.timestamp,tag.tag].join('|');
+            map[id]=Object.assign({},report,{signalGroup:group.key,signalTag:tag.tag,signalType:getSignalGroupTitle(group)});
+          });
+        });
+      });
+
+      return Object.keys(map).map(function(key){return map[key];});
+    }
+
+    function filterSignalRows(rows,filter){
+      if(filter==='opportunity') return rows.filter(function(row){return String(row.signalType||'').indexOf('機會')!==-1;});
+      if(filter==='abnormal') return rows.filter(function(row){return String(row.signalType||'').indexOf('異常')!==-1;});
+      if(filter==='customerChange') return rows.filter(function(row){return String(row.signalType||'').indexOf('變化')!==-1;});
+      return rows;
+    }
+
+    function filterFollowupDrillRows(rows,filter){
+      return rows.filter(function(row){
+        const status=normalizeBossStatus(row.latestBossStatus);
+        if(filter==='overdue') return !!row.isOverdue;
+        if(filter==='dueToday') return !!row.isDueToday;
+        if(filter==='importantA') return String(row.latestBossImportance||'').toUpperCase()==='A';
+        if(filter==='unprocessed') return row.followupBucket==='未處理' || (!row.hasBossReply || !status);
+        if(filter==='needFollowup') return status==='需追蹤';
+        return !isClosedFollowup(row);
+      });
+    }
+
+    function filterReminderRows(rows,filter){
+      return rows.filter(function(row){
+        if(filter==='unread') return !row.salesReadAt;
+        if(filter==='replied') return row.supervisorStatus==='已回覆';
+        if(filter==='pendingBossConfirm') return row.supervisorStatus==='待Boss確認';
+        if(filter==='overdue') return !!row.isOverdue;
+        if(filter==='dueToday') return !!row.isDueToday;
+        if(filter==='importantA') return row.importance==='A';
+        return true;
+      });
+    }
+
+    function filterCaseRows(rows,filter){
+      return rows.filter(function(row){
+        if(filter==='overdue') return !!row.isOverdue;
+        if(filter==='dueToday') return !!row.isDueToday;
+        if(filter==='importantA') return row.importance==='A';
+        if(filter==='allOpen') return !row.isClosed;
+        return true;
+      });
+    }
+
+    function renderDrilldownCard(kind,row){
+      if(kind==='mixed'){
+        return renderDrilldownCard(row._kind,row);
+      }
+      if(kind==='case'){
+        return renderCustomerCaseCard(row);
+      }
+      if(kind==='reminder'){
+        return renderSupervisorReminderCard(row);
+      }
+      if(kind==='followup'){
+        return renderFollowupCard(row);
+      }
+      if(kind==='signal' || kind==='report'){
+        const reportId=row.reportId||'';
+        return '<div class="detail-card">'+
+          '<div class="followup-title"><span>'+escapeHtml(row.customerName||'未命名客戶')+'</span><span class="reply-chip">'+escapeHtml(row.signalType||row.reportType||row.visitStatus||'回報')+'</span></div>'+
+          '<div class="followup-meta">'+escapeHtml(row.timestamp||row.reportTime||'')+'｜'+escapeHtml(row.owner||row.salesName||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
+          '<div class="followup-copy">'+escapeHtml(trimText(row.content||row.note||'無回報內容',140))+'</div>'+
+          '<div class="actions">'+
+            '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">查看 / 回覆</button>'+
+            '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
+            '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">建立主管提醒</button>'+
+            '<button class="action action-secondary" data-case-signal="'+escapeAttr(reportId)+'">升級案件</button>'+
+          '</div>'+
+        '</div>';
+      }
+      return '<div class="detail-card">'+
+        '<div class="followup-title"><span>'+escapeHtml(row.customerName||'未命名客戶')+'</span><span class="reply-chip">'+escapeHtml(row.status||'待處理')+'</span></div>'+
+        '<div class="followup-meta">'+escapeHtml(row.createdAt||row.reportTime||'')+'｜'+escapeHtml(row.salesName||row.owner||'未指定')+'</div>'+
+        '<div class="followup-copy">'+escapeHtml(row.note||'')+'</div>'+
+      '</div>';
+    }
+
+    function getSignalFilterLabel(filter){
+      return {all:'全部訊號',opportunity:'機會',abnormal:'異常',customerChange:'客戶變化'}[filter]||'全部訊號';
+    }
+    function getFollowupFilterLabel(filter){
+      return {all:'全部未完成',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要',unprocessed:'未處理',needFollowup:'需追蹤'}[filter]||'全部未完成';
+    }
+    function getReminderFilterLabel(filter){
+      return {allOpen:'全部未完成',unread:'未讀',replied:'已回覆',pendingBossConfirm:'待 Boss 確認',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要'}[filter]||'全部未完成';
+    }
+    function getCaseFilterLabel(filter){
+      return {allOpen:'全部未結案',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要'}[filter]||'全部';
+    }
+
+    function queryHistoryForCustomer(keyword){
+      if(!keyword){
+        return;
+      }
+
+      document.getElementById('reportHistorySearch').value=keyword;
+      queryReportHistory();
+      document.getElementById('reportHistorySearch').scrollIntoView({behavior:'smooth',block:'center'});
+    }
+
+    function bossConfirmSupervisorReminder(replyId){
+      if(!replyId){
+        return;
+      }
+
+      if(!confirm('確認業務已處理這筆主管提醒？')){
+        return;
+      }
+
+      jsonp({
+        action:'updateSupervisorReminderByBoss',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          replyId:replyId,
+          supervisorStatus:'已處理'
+        })
+      }).then(function(){
+        alert('已標記 Boss 確認');
+        loadDashboard();
+      }).catch(function(err){
+        alert('更新主管提醒失敗：'+err.message);
+      });
+    }
+
+    function bindCaseButtons(container){
+      Array.prototype.forEach.call(container.querySelectorAll('[data-case-signal]'),function(btn){
+        btn.addEventListener('click',function(){
+          openCaseModalFromSignal(btn.getAttribute('data-case-signal'));
+        });
+      });
+      Array.prototype.forEach.call(container.querySelectorAll('[data-case-followup]'),function(btn){
+        btn.addEventListener('click',function(){
+          openCaseModalFromFollowup(btn.getAttribute('data-case-followup'));
+        });
+      });
+      Array.prototype.forEach.call(container.querySelectorAll('[data-case-edit]'),function(btn){
+        btn.addEventListener('click',function(){
+          openCaseModalFromCase(btn.getAttribute('data-case-edit'));
+        });
+      });
+      Array.prototype.forEach.call(container.querySelectorAll('[data-case-close]'),function(btn){
+        btn.addEventListener('click',function(){
+          openCaseModalFromCase(btn.getAttribute('data-case-close'),{status:'結案'});
+        });
+      });
+    }
+
+    function openCaseModalBase(title,data){
+      data=data||{};
+      document.getElementById('caseModalTitle').textContent=title||'建立客戶案件';
+      document.getElementById('caseId').value=data.caseId||'';
+      document.getElementById('caseCustomerCode').value=data.customerCode||'';
+      document.getElementById('caseSource').value=data.source||'Boss手動建立';
+      document.getElementById('caseReportId').value=data.reportId||'';
+      document.getElementById('caseReplyId').value=data.replyId||'';
+      document.getElementById('caseTitle').value=data.title||'';
+      document.getElementById('caseCustomerName').value=data.customerName||'';
+      document.getElementById('caseOwner').value=data.owner||'';
+      document.getElementById('caseType').value=data.caseType||'其他';
+      document.getElementById('caseStatus').value=data.status||'新案件';
+      document.getElementById('caseImportance').value=data.importance||'B';
+      document.getElementById('caseContent').value=data.content||'';
+      document.getElementById('caseNextFollowDate').value=data.nextFollowDate||getTomorrowInputDate();
+      document.getElementById('caseEstimatedAmount').value=data.estimatedAmount||'';
+      document.getElementById('caseEstimatedProfit').value=data.estimatedProfit||'';
+      document.getElementById('caseNote').value=data.note||data.closeResult||'';
+      document.getElementById('caseModal').classList.add('show');
+      document.getElementById('caseModal').setAttribute('aria-hidden','false');
+    }
+
+    function closeCaseModal(){
+      document.getElementById('caseModal').classList.remove('show');
+      document.getElementById('caseModal').setAttribute('aria-hidden','true');
+    }
+
+    function openCaseModalFromSignal(reportId){
+      const row=collectSignalRows().find(function(item){return item.reportId===reportId;}) ||
+        ((((dashboardData||{}).reportSummary||{}).reports)||[]).find(function(item){return item.reportId===reportId;}) || {};
+      const signalType=row.signalType||'訊號雷達';
+
+      openCaseModalBase('從訊號升級案件',{
+        customerCode:row.customerCode||'',
+        customerName:row.customerName||'',
+        owner:row.owner||row.salesName||'',
+        title:signalType+'｜'+(row.customerName||'未命名客戶'),
+        caseType:inferCaseTypeForClient(signalType,row.signalTag||''),
+        content:'原始回報摘要：'+(row.content||row.note||'')+(row.signalTag?'\n標籤：'+row.signalTag:''),
+        source:'訊號雷達',
+        reportId:reportId,
+        importance:'B'
+      });
+    }
+
+    function openCaseModalFromFollowup(replyId){
+      const rows=((dashboardData&&dashboardData.followupBoard&&dashboardData.followupBoard.items)||[]);
+      const row=rows.find(function(item){return item.replyId===replyId;})||{};
+
+      openCaseModalBase('從短追蹤升級案件',{
+        customerCode:row.customerCode||'',
+        customerName:row.customerName||'',
+        owner:row.owner||'',
+        title:'短追蹤｜'+(row.customerName||'未命名客戶'),
+        caseType:'其他',
+        content:'Boss 短追蹤內容：'+(row.latestReplyContent||row.reportContent||''),
+        source:'短追蹤',
+        replyId:replyId,
+        importance:row.latestBossImportance||'B',
+        nextFollowDate:row.nextFollowDate||getTomorrowInputDate()
+      });
+    }
+
+    function openCaseModalFromReportThread(){
+      const report=(activeReportThread&&activeReportThread.report)||{};
+      openCaseModalBase('從回報升級案件',{
+        customerCode:report.customerCode||'',
+        customerName:report.customerName||'',
+        owner:report.owner||report.salesName||'',
+        title:'回報追蹤｜'+(report.customerName||'未命名客戶'),
+        caseType:'其他',
+        content:'原始回報摘要：'+(report.content||report.note||''),
+        source:'Boss手動建立',
+        reportId:report.reportId||'',
+        importance:'B'
+      });
+    }
+
+    function openCaseModalFromCase(caseId,overrides){
+      const row=(((dashboardData||{}).customerCaseSummary||{}).rows||[]).find(function(item){return item.caseId===caseId;})||{};
+      openCaseModalBase('查看 / 編輯案件',Object.assign({},row,overrides||{}));
+    }
+
+    function saveCustomerCaseFromModal(){
+      const caseId=document.getElementById('caseId').value.trim();
+      const payload={
+        caseId:caseId,
+        customerCode:document.getElementById('caseCustomerCode').value.trim(),
+        customerName:document.getElementById('caseCustomerName').value.trim(),
+        owner:document.getElementById('caseOwner').value.trim(),
+        title:document.getElementById('caseTitle').value.trim(),
+        caseType:document.getElementById('caseType').value,
+        content:document.getElementById('caseContent').value.trim(),
+        source:document.getElementById('caseSource').value||'Boss手動建立',
+        reportId:document.getElementById('caseReportId').value.trim(),
+        replyId:document.getElementById('caseReplyId').value.trim(),
+        status:document.getElementById('caseStatus').value,
+        importance:document.getElementById('caseImportance').value,
+        estimatedAmount:document.getElementById('caseEstimatedAmount').value.trim(),
+        estimatedProfit:document.getElementById('caseEstimatedProfit').value.trim(),
+        nextFollowDate:document.getElementById('caseNextFollowDate').value,
+        note:document.getElementById('caseNote').value.trim(),
+        closeResult:document.getElementById('caseNote').value.trim()
+      };
+
+      if(!payload.title || !payload.customerName || !payload.content){
+        alert('請確認客戶名稱、案件標題與案件內容。');
+        return;
+      }
+
+      const btn=document.getElementById('caseSaveBtn');
+      btn.disabled=true;
+      btn.textContent='儲存中...';
+
+      jsonp({
+        action:caseId?'updateCustomerCase':'createCustomerCase',
+        token:API_TOKEN,
+        payload:JSON.stringify(payload)
+      }).then(function(result){
+        if(result.warning){
+          alert(result.warning);
+        }
+        closeCaseModal();
+        loadDashboard();
+      }).catch(function(err){
+        alert('案件儲存失敗：'+err.message);
+      }).finally(function(){
+        btn.disabled=false;
+        btn.textContent='儲存案件';
+      });
+    }
+
+    function inferCaseTypeForClient(signalType,tag){
+      const text=String(signalType||'')+' '+String(tag||'');
+      if(text.indexOf('異常')!==-1 || text.indexOf('客訴')!==-1 || text.indexOf('不良')!==-1) return '異常';
+      if(text.indexOf('變化')!==-1 || text.indexOf('異動')!==-1) return '客戶變化';
+      if(text.indexOf('收款')!==-1) return '收款風險';
+      if(text.indexOf('技術')!==-1) return '技術支援';
+      if(text.indexOf('設備')!==-1 || text.indexOf('工具')!==-1) return '設備工具';
+      return '商機';
     }
 
     function queryReportHistory(){
