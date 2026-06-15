@@ -1058,8 +1058,16 @@ textarea{
               <span>日常拜訪 / 電話 / LINE</span>
             </label>
             <label class="contact-type-option">
+              <input type="radio" name="contactType" value="成交">
+              <span>成交</span>
+            </label>
+            <label class="contact-type-option">
               <input type="radio" name="contactType" value="收款">
               <span>收款</span>
+            </label>
+            <label class="contact-type-option">
+              <input type="radio" name="contactType" value="沒遇到 / 未回應">
+              <span>沒遇到 / 未回應</span>
             </label>
             <label class="contact-type-option">
               <input type="radio" name="contactType" value="其他">
@@ -1104,8 +1112,8 @@ textarea{
             <div class="auto-tag-hint" id="autoTagHint"></div>
           </div>
 
-          <div class="note-label">補充說明</div>
-          <textarea id="reportNote" placeholder="例如：AGM有機會、VARTA被問價、下週再追"></textarea>
+          <div class="note-label">回報內容</div>
+          <textarea id="reportNote" placeholder="有成交、機會、異常、客戶變化時請補一句；無特殊事項可留空。"></textarea>
           <button class="send" id="sendReportBtn" onclick="submitReport()">送出回報</button>
         </div>
       </div>
@@ -2267,8 +2275,16 @@ function openVisitDraftDetail(index){
           <span>日常拜訪 / 電話 / LINE</span>
         </label>
         <label class="contact-type-option">
+          <input type="radio" name="draftContactType" value="成交">
+          <span>成交</span>
+        </label>
+        <label class="contact-type-option">
           <input type="radio" name="draftContactType" value="收款">
           <span>收款</span>
+        </label>
+        <label class="contact-type-option">
+          <input type="radio" name="draftContactType" value="沒遇到 / 未回應">
+          <span>沒遇到 / 未回應</span>
         </label>
         <label class="contact-type-option">
           <input type="radio" name="draftContactType" value="其他">
@@ -2313,7 +2329,8 @@ function openVisitDraftDetail(index){
         <div class="auto-tag-hint" id="draftAutoTagHint"></div>
       </div>
 
-      <textarea class="quick-textarea" id="draftNote" placeholder="補上拜訪重點">${escapeHtml(currentVisitDraft.note||'')}</textarea>
+      <div class="note-label">回報內容</div>
+      <textarea class="quick-textarea" id="draftNote" placeholder="有成交、機會、異常、客戶變化時請補一句；無特殊事項可留空。">${escapeHtml(currentVisitDraft.note||'')}</textarea>
       <input class="quick-input" id="draftNextAction" placeholder="後續動作，可空白">
       <div class="quick-actions">
         <button class="quick-action-btn quick-action-primary" onclick="completeVisitDraftReport()">完成回報</button>
@@ -2355,19 +2372,33 @@ function completeVisitDraftReport(){
     return;
   }
 
-  const note=document.getElementById('draftNote').value.trim();
+  let note=document.getElementById('draftNote').value.trim();
   const nextAction=document.getElementById('draftNextAction').value.trim();
   const contactType=getDraftContactType();
+  const draftTags={
+    opportunity:getDraftQuickTags('opportunity'),
+    risk:getDraftQuickTags('risk'),
+    customerChange:getDraftQuickTags('customerChange')
+  };
 
   if(!contactType){
     alert('請先選擇接觸類型');
     return;
   }
 
-  if(!note){
-    alert('請輸入回報內容');
+  const contentRule=normalizeReportContent(contactType,note,draftTags,{allowConfirm:true});
+
+  if(!contentRule.ok){
+    if(contentRule.message){
+      alert(contentRule.message);
+    }
+    if(contentRule.focus!==false){
+      document.getElementById('draftNote').focus();
+    }
     return;
   }
+
+  note=contentRule.note;
 
   if(note.length>300){
     alert('備註最多 300 字');
@@ -2385,9 +2416,9 @@ function completeVisitDraftReport(){
       contactType:contactType,
       note:note,
       nextAction:nextAction,
-      opportunityTags:getDraftQuickTags('opportunity'),
-      riskTags:getDraftQuickTags('risk'),
-      customerChangeTags:getDraftQuickTags('customerChange'),
+      opportunityTags:draftTags.opportunity,
+      riskTags:draftTags.risk,
+      customerChangeTags:draftTags.customerChange,
       autoDetectedTags:detectAutoReportTags(note),
       quickTagVersion:'v1_62'
     })
@@ -3425,6 +3456,49 @@ function updateQuickTagCounts(){
   });
 }
 
+function hasManualQuickTags(tags){
+  return ['opportunity','risk','customerChange'].some(function(group){
+    return tags && tags[group] && tags[group].length;
+  });
+}
+
+function normalizeReportContent(contactType,note,tags,options){
+  const content=String(note||'').trim();
+  const type=String(contactType||'').trim();
+  const manualTags=hasManualQuickTags(tags);
+  const allowConfirm=!!(options && options.allowConfirm);
+
+  if(content){
+    return {ok:true,note:content};
+  }
+
+  if(manualTags){
+    return {ok:false,message:'已標記機會 / 異常 / 客戶變化，請補一句原因，方便後續追蹤。'};
+  }
+
+  if(type==='成交'){
+    return {ok:false,message:'請補充成交內容，例如成交品項、數量或後續安排。'};
+  }
+
+  if(type==='其他'){
+    return {ok:false,message:'請補充其他事項內容。'};
+  }
+
+  if(type==='收款'){
+    if(allowConfirm && !confirm('建議補充收款金額或款項月份。仍要送出嗎？')){
+      return {ok:false,focus:false};
+    }
+
+    return {ok:true,note:'已收款，未補充明細'};
+  }
+
+  if(type==='沒遇到 / 未回應'){
+    return {ok:true,note:'到訪或聯絡未遇到 / 未回應'};
+  }
+
+  return {ok:true,note:'已到訪，無特殊事項'};
+}
+
 function resetQuickReportTags(){
   const defaultContact=document.querySelector('input[name="contactType"][value="日常拜訪 / 電話 / LINE"]');
 
@@ -3717,19 +3791,32 @@ function submitReport(){
     return;
   }
 
-  const note=document.getElementById('reportNote').value.trim();
+  let note=document.getElementById('reportNote').value.trim();
   const contactType=getSelectedContactType();
+  const quickTags={
+    opportunity:getQuickTags('opportunity'),
+    risk:getQuickTags('risk'),
+    customerChange:getQuickTags('customerChange')
+  };
 
   if(!contactType){
     alert('請先選擇接觸類型');
     return;
   }
 
-  if(!note){
-    alert('請輸入回報內容');
-    reportNote.focus();
+  const contentRule=normalizeReportContent(contactType,note,quickTags,{allowConfirm:true});
+
+  if(!contentRule.ok){
+    if(contentRule.message){
+      alert(contentRule.message);
+    }
+    if(contentRule.focus!==false){
+      reportNote.focus();
+    }
     return;
   }
+
+  note=contentRule.note;
 
   if(note.length>300){
     alert('備註最多 300 字');
@@ -3746,9 +3833,9 @@ function submitReport(){
     status:contactType,
     note:note,
     contactType:contactType,
-    opportunityTags:getQuickTags('opportunity'),
-    riskTags:getQuickTags('risk'),
-    customerChangeTags:getQuickTags('customerChange'),
+    opportunityTags:quickTags.opportunity,
+    riskTags:quickTags.risk,
+    customerChangeTags:quickTags.customerChange,
     autoDetectedTags:detectAutoReportTags(note),
     quickTagVersion:'v1_62'
   };
