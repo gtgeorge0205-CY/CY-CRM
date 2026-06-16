@@ -79,6 +79,7 @@
 
     .section{margin-top:14px}
     .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .section-head.section{margin-top:26px;padding-top:16px;border-top:1px solid rgba(0,229,192,.16)}
     .section-title{font-size:14px;font-weight:900;margin:0;color:#e8edf3;text-transform:uppercase}
     .section-kicker{font-size:12px;color:var(--teal);font-weight:900;text-transform:uppercase}
     .section-desc{font-size:12px;color:var(--muted);line-height:1.55;margin-top:4px}
@@ -398,12 +399,11 @@
     <section class="section" id="dashboard" style="display:none">
       <div class="section-head">
         <div>
-          <div class="section-kicker">今日營運</div>
-          <h2 class="section-title">今日營運提醒</h2>
+          <div class="section-kicker">今日總覽</div>
+          <h2 class="section-title">今日總覽</h2>
         </div>
       </div>
       <div class="grid" id="metricGrid"></div>
-      <div class="system-data" id="systemDataStatus"></div>
       <div class="panel drilldown" id="bossDrilldown"></div>
 
       <div class="section-head section">
@@ -417,9 +417,9 @@
 
       <div class="section-head section">
         <div>
-          <div class="section-kicker">短追蹤</div>
-          <h2 class="section-title">短追蹤</h2>
-          <div class="section-desc">老闆已判斷需要短期追蹤的事項。</div>
+          <div class="section-kicker">待處理事項</div>
+          <h2 class="section-title">待處理事項</h2>
+          <div class="section-desc">短追蹤、主管提醒與客戶案件集中處理；老闆已判斷需要短期追蹤的事項會優先出現在這裡。</div>
         </div>
       </div>
       <div class="panel" id="followupBoard"></div>
@@ -428,7 +428,7 @@
         <div>
           <div class="section-kicker">主管提醒</div>
           <h2 class="section-title">主管提醒</h2>
-          <div class="section-desc">已發布給業務、等待已讀 / 回覆 / 回報已處理的提醒。</div>
+          <div class="section-desc">已發布給業務、等待正式業務回報或 Boss 確認的提醒。</div>
         </div>
       </div>
       <div class="panel" id="supervisorReminderBoard"></div>
@@ -518,6 +518,14 @@
 
       <div class="section-head section">
         <div>
+          <div class="section-kicker">系統資料狀態</div>
+          <h2 class="section-title">系統資料狀態 / 資料完整度</h2>
+        </div>
+      </div>
+      <div class="system-data" id="systemDataStatus"></div>
+
+      <div class="section-head section">
+        <div>
           <div class="section-kicker">客戶快速搜尋</div>
           <h2 class="section-title">客戶快速搜尋</h2>
         </div>
@@ -535,7 +543,7 @@
       <div class="thread-head">
         <div>
           <div class="section-kicker">業務回報討論串</div>
-          <div class="thread-title" id="threadTitle">查看 / 回覆</div>
+          <div class="thread-title" id="threadTitle">查看 / 處理</div>
         </div>
         <button class="thread-close" onclick="closeReportThread()">×</button>
       </div>
@@ -588,8 +596,28 @@
         <textarea class="form-control" id="caseContent" placeholder="案件內容"></textarea>
         <div class="form-row">
           <input class="form-control" id="caseNextFollowDate" type="date">
-          <input class="form-control" id="caseEstimatedAmount" placeholder="預估金額">
-          <input class="form-control" id="caseEstimatedProfit" placeholder="預估毛利">
+          <select class="form-control" id="caseValue">
+            <option value="中">案件價值 中</option>
+            <option value="高">案件價值 高</option>
+            <option value="低">案件價值 低</option>
+          </select>
+          <select class="form-control" id="caseImpactType">
+            <option value="營收機會">營收機會</option>
+            <option value="毛利改善">毛利改善</option>
+            <option value="客戶維繫">客戶維繫</option>
+            <option value="收款風險">收款風險</option>
+            <option value="客訴風險">客訴風險</option>
+            <option value="競品防守">競品防守</option>
+            <option value="內部支援">內部支援</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
+        <div class="form-panel show">
+          <div class="thread-label">進階資料（選填）</div>
+          <div class="form-row">
+            <input class="form-control" id="caseEstimatedAmount" placeholder="預估金額（進階）">
+            <input class="form-control" id="caseEstimatedProfit" placeholder="預估毛利（進階，不在主卡顯示）">
+          </div>
         </div>
         <textarea class="form-control" id="caseNote" placeholder="備註 / 結案結果"></textarea>
         <input type="hidden" id="caseId">
@@ -628,6 +656,7 @@
     loadCustomers();
 
     function loadDashboard(){
+      const dashboardStartedAt=Date.now();
       console.log('boss dashboard loading');
       setMessage('<div class="loading">載入 Boss 戰情資料中...</div>');
       document.getElementById('dashboard').style.display='none';
@@ -636,7 +665,7 @@
         action:'getBossDashboard',
         token:API_TOKEN
       }).then(function(data){
-        console.log('boss dashboard loaded');
+        console.log('boss dashboard loaded in '+(Date.now()-dashboardStartedAt)+' ms',data&&data.debugTiming?data.debugTiming:'');
         dashboardData=data||{};
         renderDashboard(dashboardData);
       }).catch(function(err){
@@ -926,8 +955,7 @@
         '<div class="followup-copy"><b>原始回報</b> '+escapeHtml(reportText)+'</div>'+
         '<div class="followup-copy"><b>最新回覆</b> '+escapeHtml(replyText)+'</div>'+
         '<div class="actions">'+
-          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
-          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">建立主管提醒</button>'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 處理</button>'+
           '<button class="action action-secondary" data-case-followup="'+escapeAttr(row.replyId||'')+'">升級案件</button>'+
           '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
         '</div>'+
@@ -940,7 +968,7 @@
       const rows=Array.isArray(summary.rows)?summary.rows:[];
       const stats=[
         {label:'未完成',value:summary.totalCount||0,filter:'allOpen'},
-        {label:'未讀',value:summary.unreadCount||0,filter:'unread'},
+        {label:'待處理',value:summary.pendingCount||0,filter:'pending'},
         {label:'待 Boss 確認',value:summary.pendingBossConfirmCount||0,filter:'pendingBossConfirm'},
         {label:'逾期',value:summary.overdueCount||0,filter:'overdue'}
       ];
@@ -964,21 +992,22 @@
 
     function renderSupervisorReminderCard(row){
       const cls=row.isOverdue?'reminder-card overdue':(row.importance==='A'?'reminder-card important':'reminder-card');
+      const linked=row.linkedReportId||row.reportId||'';
 
       return '<div class="'+cls+'">'+
         '<div class="followup-title"><span>'+escapeHtml(row.supervisorTitle||'主管提醒')+'</span><span class="reply-chip">'+escapeHtml(row.supervisorStatus||'待處理')+'</span></div>'+
         '<div class="followup-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜追蹤 '+escapeHtml(row.nextFollowUpDate||'未排程')+'</div>'+
         '<div class="followup-copy">'+escapeHtml(trimText(row.supervisorContent||'',120))+'</div>'+
         '<div class="reply-state">'+
-          (row.salesReadAt?'<span class="reply-chip done">已讀 '+escapeHtml(row.salesReadAt)+'</span>':'<span class="reply-chip">尚未已讀</span>')+
-          (row.salesReplyContent?'<span class="reply-chip done">業務已回覆</span>':'')+
-          (row.salesCompletedAt?'<span class="reply-chip hot">待 Boss 確認</span>':'')+
+          (row.salesHandledAt?'<span class="reply-chip done">業務已回報 '+escapeHtml(row.salesHandledAt)+'</span>':'<span class="reply-chip">等待正式回報</span>')+
+          (row.linkedReportId?'<span class="reply-chip done">已關聯回報</span>':'')+
         '</div>'+
-        (row.salesReplyContent?'<div class="followup-copy"><b>業務回覆</b> '+escapeHtml(row.salesReplyContent)+'</div>':'')+
-        (row.salesCompletionNote?'<div class="followup-copy"><b>處理說明</b> '+escapeHtml(row.salesCompletionNote)+'</div>':'')+
+        (row.salesProcessSummary?'<div class="followup-copy"><b>業務處理摘要</b> '+escapeHtml(row.salesProcessSummary)+'</div>':'')+
         '<div class="actions">'+
-          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看提醒</button>'+
-          '<button class="action action-secondary" onclick="bossConfirmSupervisorReminder(\''+escapeAttr(row.replyId||'')+'\')">標記 Boss 已確認</button>'+
+          (linked?'<button class="action action-secondary" data-report-thread="'+escapeAttr(linked)+'">查看 / 處理</button>':'')+
+          '<button class="action action-secondary" onclick="closeSupervisorReminder(\''+escapeAttr(row.replyId||'')+'\')">關閉提醒</button>'+
+          '<button class="action action-secondary" onclick="reopenSupervisorReminder(\''+escapeAttr(row.replyId||'')+'\')">繼續追蹤</button>'+
+          '<button class="action action-danger" onclick="withdrawSupervisorReminder(\''+escapeAttr(row.replyId||'')+'\')">撤回</button>'+
           '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
         '</div>'+
       '</div>';
@@ -1017,13 +1046,13 @@
       return '<div class="'+cls+'">'+
         '<div class="followup-title"><span>'+escapeHtml(row.title||'未命名案件')+'</span><span class="reply-chip '+(row.importance==='A'?'hot':'')+'">重要 '+escapeHtml(row.importance||'B')+'</span></div>'+
         '<div class="followup-meta">'+
-          escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.caseType||'其他')+'｜'+escapeHtml(row.status||'新案件')+'<br>'+
+          escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.caseType||'其他')+'｜價值 '+escapeHtml(row.caseValue||'中')+'｜'+escapeHtml(row.impactType||'其他')+'｜'+escapeHtml(row.status||'新案件')+'<br>'+
           '下次追蹤 '+escapeHtml(row.nextFollowDate||'未排程')+'｜建立 '+escapeHtml(row.createdAt||'')+'｜更新 '+escapeHtml(row.updatedAt||'')+
         '</div>'+
         '<div class="followup-copy">'+escapeHtml(trimText(row.content||'',130))+'</div>'+
         '<div class="reply-state">'+
-          '<span class="reply-chip">預估金額 '+escapeHtml(row.estimatedAmount||'未填')+'</span>'+
-          '<span class="reply-chip">預估毛利 '+escapeHtml(row.estimatedProfit||'未填')+'</span>'+
+          '<span class="reply-chip">案件價值 '+escapeHtml(row.caseValue||'中')+'</span>'+
+          '<span class="reply-chip">影響 '+escapeHtml(row.impactType||'其他')+'</span>'+
           '<span class="reply-chip '+(row.isOverdue?'hot':'')+'">'+escapeHtml(row.dueBucket||'未排程')+'</span>'+
         '</div>'+
         '<div class="actions">'+
@@ -1124,7 +1153,7 @@
         '<div class="report-content">'+escapeHtml(trimText(row.content||row.note||'無回報內容',130))+'</div>'+
         renderReportTagRows(row)+
         '<div class="actions">'+
-          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 處理</button>'+
           '<button class="action action-secondary" data-signal-followup="'+escapeAttr(row.reportId||'')+'">加入短追蹤</button>'+
           '<button class="action action-secondary" data-case-signal="'+escapeAttr(row.reportId||'')+'">升級案件</button>'+
         '</div>'+
@@ -1260,7 +1289,7 @@
         (row.status?'<div class="report-meta">狀態：'+escapeHtml(row.status)+'</div>':'')+
         replyState+
         '<div class="actions">'+
-          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 回覆</button>'+
+          '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 處理</button>'+
           (mapsUrl?'<a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a>':'')+
         '</div>'+
       '</div>';
@@ -1706,7 +1735,7 @@
       const modal=document.getElementById('reportThreadModal');
       modal.classList.add('show');
       modal.setAttribute('aria-hidden','false');
-      document.getElementById('threadTitle').textContent='查看 / 回覆';
+      document.getElementById('threadTitle').textContent='查看 / 處理';
       document.getElementById('threadBody').innerHTML='<div class="loading">載入回報內容中...</div>';
 
       jsonp({
@@ -1758,9 +1787,9 @@
           renderReplyList(replies)+
         '</div>'+
         '<div class="thread-block">'+
-          '<div class="thread-label">新增回覆</div>'+
+          '<div class="thread-label">查看 / 處理</div>'+
           '<div class="reply-form">'+
-            '<textarea class="form-control" id="bossReplyContent" maxlength="300" placeholder="輸入給自己的處理備忘、交辦重點或追蹤原因"></textarea>'+
+            '<textarea class="form-control" id="bossReplyContent" maxlength="300" placeholder="Boss 內部回覆（選填）：處理備忘、交辦重點或追蹤原因"></textarea>'+
             '<div class="char-row"><span id="bossReplyCount">0 / 300</span></div>'+
             '<label class="form-check"><input type="checkbox" id="createSupervisorReminder" onchange="toggleSupervisorReminderFields()">建立主管提醒</label>'+
             '<div class="form-panel" id="supervisorReminderFields">'+
@@ -1783,9 +1812,11 @@
               '<input class="form-control" id="bossReplyNextDate" type="date">'+
             '</div>'+
             '<div class="actions">'+
-              '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存回覆</button>'+
+              '<button class="action action-secondary" id="bossReplySaveBtn" onclick="saveBossReply()">儲存處理</button>'+
               '<button class="action action-secondary" onclick="openCaseModalFromReportThread()">升級案件</button>'+
+              '<button class="action action-secondary" onclick="loadReminderLinkOptions()">關聯主管提醒</button>'+
             '</div>'+
+            '<div class="form-panel" id="reminderLinkPanel"></div>'+
           '</div>'+
         '</div>';
       const contentBox=document.getElementById('bossReplyContent');
@@ -1857,11 +1888,11 @@
       return '<div class="reply-state">'+
         '<span class="reply-chip hot">已建立主管提醒</span>'+
         '<span class="reply-chip">'+escapeHtml(reply.supervisorStatus||'待處理')+'</span>'+
-        (reply.salesReadAt?'<span class="reply-chip done">業務已讀 '+escapeHtml(reply.salesReadAt)+'</span>':'')+
-        (reply.salesReplyContent?'<span class="reply-chip done">業務回覆：'+escapeHtml(trimText(reply.salesReplyContent,40))+'</span>':'')+
-        (reply.salesCompletedAt?'<span class="reply-chip hot">完成回報 '+escapeHtml(reply.salesCompletedAt)+'</span>':'')+
+        (reply.salesHandledAt?'<span class="reply-chip done">業務已回報 '+escapeHtml(reply.salesHandledAt)+'</span>':'')+
+        (reply.linkedReportId?'<span class="reply-chip done">關聯回報 '+escapeHtml(reply.linkedReportId)+'</span>':'')+
+        (reply.bossConfirmedAt?'<span class="reply-chip done">Boss確認 '+escapeHtml(reply.bossConfirmedAt)+'</span>':'')+
       '</div>'+
-      (reply.salesCompletionNote?'<div class="report-content">處理說明：'+escapeHtml(reply.salesCompletionNote)+'</div>':'');
+      (reply.salesProcessSummary?'<div class="report-content">業務處理摘要：'+escapeHtml(reply.salesProcessSummary)+'</div>':'');
     }
 
     function toggleSupervisorReminderFields(){
@@ -1903,13 +1934,16 @@
 
       const content=document.getElementById('bossReplyContent').value.trim();
 
-      if(!content){
-        alert('請先輸入回覆內容。');
+      if(content.length>300){
+        alert('回覆內容請控制在 300 字內。');
         return;
       }
 
-      if(content.length>300){
-        alert('回覆內容請控制在 300 字內。');
+      const createReminder=!!(document.getElementById('createSupervisorReminder')&&document.getElementById('createSupervisorReminder').checked);
+      const supervisorContent=((document.getElementById('supervisorReminderContent')||{}).value||'').trim();
+
+      if(createReminder && !supervisorContent){
+        alert('建立主管提醒時，請填主管提醒內容。');
         return;
       }
 
@@ -1926,9 +1960,9 @@
           status:document.getElementById('bossReplyStatus').value,
           importance:document.getElementById('bossReplyImportance').value,
           nextFollowUpDate:document.getElementById('bossReplyNextDate').value,
-          createSupervisorReminder:!!(document.getElementById('createSupervisorReminder')&&document.getElementById('createSupervisorReminder').checked),
+          createSupervisorReminder:createReminder,
           supervisorTitle:(document.getElementById('supervisorReminderTitle')||{}).value||'',
-          supervisorContent:(document.getElementById('supervisorReminderContent')||{}).value||''
+          supervisorContent:supervisorContent
         })
       }).then(function(result){
         const reply=result.reply||{};
@@ -1947,7 +1981,73 @@
       }).catch(function(err){
         alert('儲存失敗：'+err.message);
         btn.disabled=false;
-        btn.textContent='儲存回覆';
+        btn.textContent='儲存處理';
+      });
+    }
+
+    function loadReminderLinkOptions(){
+      const report=(activeReportThread&&activeReportThread.report)||{};
+      const panel=document.getElementById('reminderLinkPanel');
+
+      if(!report.reportId || !panel){
+        return;
+      }
+
+      panel.classList.add('show');
+      panel.innerHTML='<div class="loading">載入同一客戶的主管提醒...</div>';
+
+      jsonp({
+        action:'getSupervisorRemindersForCustomer',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          customerCode:report.customerCode||'',
+          customerName:report.customerName||''
+        })
+      }).then(function(data){
+        const rows=Array.isArray(data&&data.rows)?data.rows:[];
+
+        if(!rows.length){
+          panel.innerHTML='<div class="empty">此客戶目前沒有未關閉主管提醒。</div>';
+          return;
+        }
+
+        panel.innerHTML=
+          '<div class="thread-label">選擇要關聯的主管提醒</div>'+
+          rows.map(function(row){
+            return '<div class="history-card">'+
+              '<div class="card-name">'+escapeHtml(row.supervisorTitle||'主管提醒')+'</div>'+
+              '<div class="card-meta">'+escapeHtml(row.supervisorStatus||'待處理')+'｜重要 '+escapeHtml(row.importance||'B')+'｜追蹤 '+escapeHtml(row.nextFollowUpDate||'未排程')+'</div>'+
+              '<div class="report-content">'+escapeHtml(trimText(row.supervisorContent||'',90))+'</div>'+
+              '<div class="actions"><button class="action action-secondary" onclick="linkReportToReminder(&quot;'+escapeAttr(row.replyId||'')+'&quot;)">關聯這筆提醒</button></div>'+
+            '</div>';
+          }).join('');
+      }).catch(function(err){
+        panel.innerHTML='<div class="error">主管提醒載入失敗：'+escapeHtml(err.message)+'</div>';
+      });
+    }
+
+    function linkReportToReminder(reminderId){
+      const report=(activeReportThread&&activeReportThread.report)||{};
+
+      if(!report.reportId || !reminderId){
+        return;
+      }
+
+      jsonp({
+        action:'linkSalesReportToSupervisorReminder',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          reportId:report.reportId,
+          reminderId:reminderId,
+          linkedBy:'Boss',
+          source:'boss_manual_link'
+        })
+      }).then(function(){
+        alert('已關聯主管提醒，狀態改為待 Boss 確認。');
+        openReportThread(report.reportId,{message:'已關聯主管提醒。'});
+        loadDashboard();
+      }).catch(function(err){
+        alert('關聯失敗：'+err.message);
       });
     }
 
@@ -1969,21 +2069,49 @@
 
     function openBossDrilldown(type,filter){
       const target=document.getElementById('bossDrilldown');
-      const data=dashboardData||{};
-      const detail=getDrilldownRows(type,filter);
-      const rows=detail.rows||[];
-      const shown=rows.slice(0,100);
-
       target.classList.add('show');
       target.innerHTML=
         '<div class="drilldown-head">'+
-          '<div><div class="drilldown-title">'+escapeHtml(detail.title)+'</div>'+
-          '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel)+'｜筆數 '+num(rows.length)+'｜最後更新 '+escapeHtml(data.generatedAt||'')+'</div></div>'+
+          '<div><div class="drilldown-title">明細檢視</div>'+
+          '<div class="drilldown-meta">正在載入明細...</div></div>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
+        '</div><div class="loading">載入中...</div>';
+      target.scrollIntoView({behavior:'smooth',block:'start'});
+
+      jsonp({
+        action:'getBossDrilldown',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          type:type,
+          filter:filter,
+          limit:100
+        })
+      }).then(function(detail){
+        renderBossDrilldownDetail(detail||{},type,filter);
+      }).catch(function(err){
+        console.log('boss drilldown api failed, fallback to preview',err.message);
+        const detail=getDrilldownRows(type,filter);
+        detail.message='明細 API 載入失敗，以下為首頁預覽資料：'+err.message;
+        renderBossDrilldownDetail(detail,type,filter);
+      });
+    }
+
+    function renderBossDrilldownDetail(detail,type,filter){
+      const target=document.getElementById('bossDrilldown');
+      const data=dashboardData||{};
+      const rows=detail.rows||[];
+      const shown=rows.slice(0,100);
+      const total=typeof detail.totalCount!=='undefined'?detail.totalCount:rows.length;
+
+      target.innerHTML=
+        '<div class="drilldown-head">'+
+          '<div><div class="drilldown-title">'+escapeHtml(detail.title||'明細檢視')+'</div>'+
+          '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel||filter||'全部')+'｜筆數 '+num(total)+'｜最後更新 '+escapeHtml(detail.generatedAt||data.generatedAt||'')+'</div></div>'+
           '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
         '</div>'+
-        (rows.length>shown.length?'<div class="empty">目前顯示前 100 筆，請用篩選縮小範圍。</div>':'')+
+        (detail.message?'<div class="empty">'+escapeHtml(detail.message)+'</div>':'')+
+        (total>shown.length?'<div class="empty">目前顯示前 100 筆，請用篩選縮小範圍。</div>':'')+
         (shown.length?'<div class="detail-list">'+shown.map(function(row){return renderDrilldownCard(detail.kind,row);}).join('')+'</div>':'<div class="empty">此條件目前沒有明細。</div>');
-      target.scrollIntoView({behavior:'smooth',block:'start'});
       bindReportThreadButtons(target);
       bindSignalFollowupButtons(target);
       bindCaseButtons(target);
@@ -2071,8 +2199,7 @@
 
     function filterReminderRows(rows,filter){
       return rows.filter(function(row){
-        if(filter==='unread') return !row.salesReadAt;
-        if(filter==='replied') return row.supervisorStatus==='已回覆';
+        if(filter==='pending') return row.supervisorStatus==='待處理';
         if(filter==='pendingBossConfirm') return row.supervisorStatus==='待Boss確認';
         if(filter==='overdue') return !!row.isOverdue;
         if(filter==='dueToday') return !!row.isDueToday;
@@ -2111,9 +2238,8 @@
           '<div class="followup-meta">'+escapeHtml(row.timestamp||row.reportTime||'')+'｜'+escapeHtml(row.owner||row.salesName||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
           '<div class="followup-copy">'+escapeHtml(trimText(row.content||row.note||'無回報內容',140))+'</div>'+
           '<div class="actions">'+
-            '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">查看 / 回覆</button>'+
+            '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">查看 / 處理</button>'+
             '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
-            '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">建立主管提醒</button>'+
             '<button class="action action-secondary" data-case-signal="'+escapeAttr(reportId)+'">升級案件</button>'+
           '</div>'+
         '</div>';
@@ -2132,7 +2258,7 @@
       return {all:'全部未完成',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要',unprocessed:'未處理',needFollowup:'需追蹤'}[filter]||'全部未完成';
     }
     function getReminderFilterLabel(filter){
-      return {allOpen:'全部未完成',unread:'未讀',replied:'已回覆',pendingBossConfirm:'待 Boss 確認',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要'}[filter]||'全部未完成';
+      return {allOpen:'全部未完成',pending:'待處理',pendingBossConfirm:'待 Boss 確認',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要'}[filter]||'全部未完成';
     }
     function getCaseFilterLabel(filter){
       return {allOpen:'全部未結案',overdue:'逾期',dueToday:'今日到期',importantA:'A級重要'}[filter]||'全部';
@@ -2148,27 +2274,68 @@
       document.getElementById('reportHistorySearch').scrollIntoView({behavior:'smooth',block:'center'});
     }
 
-    function bossConfirmSupervisorReminder(replyId){
+    function closeSupervisorReminder(replyId){
       if(!replyId){
         return;
       }
 
-      if(!confirm('確認業務已處理這筆主管提醒？')){
+      if(!confirm('確認關閉這筆主管提醒？')){
         return;
       }
 
       jsonp({
-        action:'updateSupervisorReminderByBoss',
+        action:'closeSupervisorReminderByBoss',
         token:API_TOKEN,
         payload:JSON.stringify({
-          replyId:replyId,
-          supervisorStatus:'已處理'
+          replyId:replyId
         })
       }).then(function(){
-        alert('已標記 Boss 確認');
+        alert('主管提醒已關閉');
         loadDashboard();
       }).catch(function(err){
         alert('更新主管提醒失敗：'+err.message);
+      });
+    }
+
+    function reopenSupervisorReminder(replyId){
+      if(!replyId){
+        return;
+      }
+
+      jsonp({
+        action:'reopenSupervisorReminderByBoss',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          replyId:replyId
+        })
+      }).then(function(){
+        alert('已改回待處理');
+        loadDashboard();
+      }).catch(function(err){
+        alert('更新主管提醒失敗：'+err.message);
+      });
+    }
+
+    function withdrawSupervisorReminder(replyId){
+      if(!replyId){
+        return;
+      }
+
+      if(!confirm('確認撤回這筆主管提醒？')){
+        return;
+      }
+
+      jsonp({
+        action:'withdrawSupervisorReminderByBoss',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          replyId:replyId
+        })
+      }).then(function(){
+        alert('主管提醒已撤回');
+        loadDashboard();
+      }).catch(function(err){
+        alert('撤回主管提醒失敗：'+err.message);
       });
     }
 
@@ -2211,6 +2378,8 @@
       document.getElementById('caseImportance').value=data.importance||'B';
       document.getElementById('caseContent').value=data.content||'';
       document.getElementById('caseNextFollowDate').value=data.nextFollowDate||getTomorrowInputDate();
+      document.getElementById('caseValue').value=data.caseValue||'中';
+      document.getElementById('caseImpactType').value=data.impactType||'其他';
       document.getElementById('caseEstimatedAmount').value=data.estimatedAmount||'';
       document.getElementById('caseEstimatedProfit').value=data.estimatedProfit||'';
       document.getElementById('caseNote').value=data.note||data.closeResult||'';
@@ -2294,6 +2463,8 @@
         replyId:document.getElementById('caseReplyId').value.trim(),
         status:document.getElementById('caseStatus').value,
         importance:document.getElementById('caseImportance').value,
+        caseValue:document.getElementById('caseValue').value,
+        impactType:document.getElementById('caseImpactType').value,
         estimatedAmount:document.getElementById('caseEstimatedAmount').value.trim(),
         estimatedProfit:document.getElementById('caseEstimatedProfit').value.trim(),
         nextFollowDate:document.getElementById('caseNextFollowDate').value,
@@ -2387,7 +2558,7 @@
             '<div class="thread-label">Boss 回覆</div>'+
             (replies.length?renderReplyList(replies):'<div class="empty">尚無 Boss 回覆。</div>')+
           '</div>'+
-          '<div class="actions"><button class="action action-secondary" data-report-thread="'+escapeAttr(report.reportId||'')+'">查看 / 回覆</button></div>'+
+          '<div class="actions"><button class="action action-secondary" data-report-thread="'+escapeAttr(report.reportId||'')+'">查看 / 處理</button></div>'+
         '</div>';
       }).join('');
 
