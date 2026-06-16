@@ -389,7 +389,7 @@
         <div class="subtitle">客戶訊號漏斗｜經營警示｜現場回報</div>
         <div class="sub">最後更新：<span id="generatedAt">尚未載入</span></div>
       </div>
-      <button class="refresh" onclick="loadDashboard()">重新整理</button>
+      <button class="refresh" onclick="loadDashboard(true)">重新整理</button>
     </header>
 
     <section class="section" id="messageArea">
@@ -638,6 +638,9 @@
     const JSONP_TIMEOUT_MS=20000;
     let dashboardData=null;
     let customers=[];
+    let customersLoaded=false;
+    let customersLoading=false;
+    let salesSummaryLoading=false;
     let reportExpanded=false;
     let actionSignalsExpanded=false;
     let followupFilter='全部待辦';
@@ -645,7 +648,10 @@
     let activeReportThread=null;
     let pendingReplyDefaults=null;
 
-    document.getElementById('customerSearch').addEventListener('input',renderCustomerSearch);
+    document.getElementById('customerSearch').addEventListener('input',function(){
+      ensureCustomersForSearch();
+      renderCustomerSearch();
+    });
     document.getElementById('reportHistorySearchBtn').addEventListener('click',queryReportHistory);
     document.getElementById('reportHistorySearch').addEventListener('keydown',function(event){
       if(event.key==='Enter'){
@@ -653,9 +659,8 @@
       }
     });
     loadDashboard();
-    loadCustomers();
 
-    function loadDashboard(){
+    function loadDashboard(forceRefresh){
       const dashboardStartedAt=Date.now();
       console.log('boss dashboard loading');
       setMessage('<div class="loading">載入 Boss 戰情資料中...</div>');
@@ -663,26 +668,45 @@
 
       jsonp({
         action:'getBossDashboard',
-        token:API_TOKEN
+        token:API_TOKEN,
+        forceRefresh:forceRefresh?'1':''
       }).then(function(data){
         console.log('boss dashboard loaded in '+(Date.now()-dashboardStartedAt)+' ms',data&&data.debugTiming?data.debugTiming:'');
+        if(data&&data.debugTiming&&data.debugTiming.cacheHit){
+          console.log('boss dashboard cache hit');
+        }
+        console.log('boss dashboard timing:',data&&data.debugTiming?data.debugTiming:{});
         dashboardData=data||{};
         renderDashboard(dashboardData);
       }).catch(function(err){
         console.log('boss dashboard error',err.message);
-        setMessage('<div class="error">Boss 戰情資料載入失敗<br>'+escapeHtml(err.message)+'<br><button class="action action-secondary" style="margin-top:10px" onclick="loadDashboard()">重試</button></div>');
+        setMessage('<div class="error">Boss 戰情資料載入失敗<br>'+escapeHtml(err.message)+'<br><button class="action action-secondary" style="margin-top:10px" onclick="loadDashboard(true)">重試</button></div>');
       });
     }
 
+    function ensureCustomersForSearch(){
+      const keyword=document.getElementById('customerSearch').value.trim();
+
+      if(!keyword || customersLoaded || customersLoading){
+        return;
+      }
+
+      loadCustomers();
+    }
+
     function loadCustomers(){
+      customersLoading=true;
       jsonp({
         action:'getCustomers',
         mode:'boss'
       }).then(function(data){
         customers=Array.isArray(data)?data:[];
+        customersLoaded=true;
         renderCustomerSearch();
       }).catch(function(err){
         document.getElementById('searchResults').innerHTML='<div class="empty">客戶資料載入失敗：'+escapeHtml(err.message)+'</div>';
+      }).finally(function(){
+        customersLoading=false;
       });
     }
 
@@ -697,12 +721,40 @@
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
       renderSalesSummary(data.salesSummary||{});
+      loadSalesSummary(false);
       renderFollowupBoard(data.followupBoard||{});
       renderSupervisorReminderBoard(data.supervisorReminderSummary||{});
       renderCustomerCaseBoard(data.customerCaseSummary||{});
       renderQuickTagSummary(data.quickTagSummary||{});
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
+    }
+
+    function loadSalesSummary(forceRefresh){
+      if(salesSummaryLoading){
+        return;
+      }
+
+      salesSummaryLoading=true;
+      jsonp({
+        action:'getBossSalesSummary',
+        token:API_TOKEN,
+        forceRefresh:forceRefresh?'1':''
+      }).then(function(summary){
+        if(dashboardData){
+          dashboardData.salesSummary=summary||{};
+        }
+        if(summary&&summary.debugTiming&&summary.debugTiming.cacheHit){
+          console.log('boss sales summary cache hit');
+        }
+        console.log('boss sales summary timing:',summary&&summary.debugTiming?summary.debugTiming:{});
+        renderSalesSummary(summary||{});
+      }).catch(function(err){
+        console.log('boss sales summary missing',err.message);
+        renderSalesSummary({message:'尚未讀取到銷貨分析摘要'});
+      }).finally(function(){
+        salesSummaryLoading=false;
+      });
     }
 
     function renderMetrics(summary){
@@ -1080,11 +1132,8 @@
 
       Array.prototype.forEach.call(target.querySelectorAll('[data-quick-tag]'),function(btn){
         btn.addEventListener('click',function(){
-          activeQuickTagDetail={
-            groupKey:btn.getAttribute('data-quick-group')||'',
-            tag:btn.getAttribute('data-quick-tag')||''
-          };
-          renderQuickTagSummary((dashboardData&&dashboardData.quickTagSummary)||{});
+          activeQuickTagDetail=null;
+          openBossDrilldown('signals','tag:'+(btn.getAttribute('data-quick-tag')||''));
         });
       });
       bindReportThreadButtons(target);
@@ -1109,7 +1158,7 @@
 
     function renderQuickTagDetail(){
       if(!activeQuickTagDetail){
-        return '<div class="empty">點擊上方訊號，可查看相關回報明細；需要盯一下的項目可加入短追蹤。</div>';
+        return '<div class="empty">點擊上方訊號，會在明細檢視載入相關回報；需要盯一下的項目可加入短追蹤。</div>';
       }
 
       const summary=(dashboardData&&dashboardData.quickTagSummary)||{};
@@ -1348,7 +1397,7 @@
 
         if(summary.message && !statusStats.length && !alerts.length && !topProfitCustomers.length && !decliningCustomers.length && !actionSignals.length){
           console.log('boss sales summary missing',summary.message);
-          target.innerHTML='<div class="empty">尚未讀取到銷貨分析摘要</div>';
+          target.innerHTML='<div class="empty">'+escapeHtml(summary.message||'尚未讀取到銷貨分析摘要')+'</div>';
           return;
         }
 
@@ -1683,6 +1732,11 @@
 
       if(!keyword){
         results.innerHTML='<div class="empty">輸入關鍵字搜尋客戶。</div>';
+        return;
+      }
+
+      if(!customersLoaded){
+        results.innerHTML='<div class="empty">客戶資料載入中...</div>';
         return;
       }
 
@@ -2045,7 +2099,7 @@
       }).then(function(){
         alert('已關聯主管提醒，狀態改為待 Boss 確認。');
         openReportThread(report.reportId,{message:'已關聯主管提醒。'});
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         alert('關聯失敗：'+err.message);
       });
@@ -2291,7 +2345,7 @@
         })
       }).then(function(){
         alert('主管提醒已關閉');
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         alert('更新主管提醒失敗：'+err.message);
       });
@@ -2310,7 +2364,7 @@
         })
       }).then(function(){
         alert('已改回待處理');
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         alert('更新主管提醒失敗：'+err.message);
       });
@@ -2333,7 +2387,7 @@
         })
       }).then(function(){
         alert('主管提醒已撤回');
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         alert('撤回主管提醒失敗：'+err.message);
       });
@@ -2490,7 +2544,7 @@
           alert(result.warning);
         }
         closeCaseModal();
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         alert('案件儲存失敗：'+err.message);
       }).finally(function(){
@@ -2585,7 +2639,7 @@
         })
       }).then(function(){
         console.log('void unmatched draft success',draftId);
-        loadDashboard();
+        loadDashboard(true);
       }).catch(function(err){
         console.log('void unmatched draft failed',err.message);
         alert('作廢失敗：'+err.message);
