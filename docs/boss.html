@@ -302,6 +302,10 @@
     .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
     .form-control{width:100%;border:1px solid rgba(0,229,192,.24);border-radius:8px;background:#080c11;color:#fff;min-height:44px;padding:10px;outline:none}
     textarea.form-control{min-height:112px;resize:vertical}
+    .date-input-shell{position:relative;width:100%}
+    .date-input-shell .form-control{padding-right:48px}
+    .date-picker-trigger{position:absolute;right:5px;top:5px;width:34px;height:34px;border:1px solid rgba(0,229,192,.25);border-radius:8px;background:rgba(0,229,192,.08);color:#c8fff6;cursor:pointer}
+    .date-picker-trigger:hover{background:rgba(0,229,192,.16)}
     .date-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
     .date-shortcuts button{min-height:34px;border:1px solid rgba(0,229,192,.25);border-radius:999px;background:rgba(0,229,192,.08);color:#c8fff6;padding:6px 10px;font-size:12px;cursor:pointer}
     .date-shortcuts button:hover{background:rgba(0,229,192,.16)}
@@ -430,7 +434,6 @@
         </div>
       </div>
       <div class="panel" id="followupBoard"></div>
-      <div class="panel drilldown" id="followupDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -440,7 +443,6 @@
         </div>
       </div>
       <div class="panel" id="supervisorReminderBoard"></div>
-      <div class="panel drilldown" id="reminderDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -450,7 +452,6 @@
         </div>
       </div>
       <div class="panel" id="quickTagSummary"></div>
-      <div class="panel drilldown" id="signalDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -460,7 +461,6 @@
         </div>
       </div>
       <div class="panel" id="customerCaseBoard"></div>
-      <div class="panel drilldown" id="caseDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -859,14 +859,94 @@
     function getDateInputOffset(days){
       const date=new Date();
       date.setDate(date.getDate()+Number(days||0));
-      const y=date.getFullYear();
-      const m=String(date.getMonth()+1).padStart(2,'0');
-      const d=String(date.getDate()).padStart(2,'0');
-      return y+'-'+m+'-'+d;
+      return normalizeDateForInput(date);
+    }
+
+    function normalizeDateForInput(value){
+      if(!value){
+        return '';
+      }
+
+      if(value instanceof Date && !isNaN(value.getTime())){
+        const y=value.getFullYear();
+        const m=String(value.getMonth()+1).padStart(2,'0');
+        const d=String(value.getDate()).padStart(2,'0');
+        return y+'-'+m+'-'+d;
+      }
+
+      const text=String(value||'').trim();
+      const match=text.match(/(\d{4})[\/\-年.](\d{1,2})[\/\-月.](\d{1,2})/);
+      if(match){
+        return match[1]+'-'+String(match[2]).padStart(2,'0')+'-'+String(match[3]).padStart(2,'0');
+      }
+
+      const compact=text.match(/^(\d{4})(\d{2})(\d{2})$/);
+      if(compact){
+        return compact[1]+'-'+compact[2]+'-'+compact[3];
+      }
+
+      const parsed=new Date(text.replace(/\//g,'-'));
+      return isNaN(parsed.getTime())?'':normalizeDateForInput(parsed);
+    }
+
+    function formatDateForSave(value){
+      return normalizeDateForInput(value);
+    }
+
+    function openNativeDatePicker(input){
+      if(!input){
+        return;
+      }
+
+      input.focus();
+      if(typeof input.showPicker==='function'){
+        try{
+          input.showPicker();
+        }catch(err){
+          console.log('native date picker unavailable',err.message);
+        }
+      }
+    }
+
+    function prepareDateInput(inputId){
+      const input=document.getElementById(inputId);
+
+      if(!input){
+        return null;
+      }
+
+      input.type='date';
+      input.value=normalizeDateForInput(input.value);
+
+      if(!input.dataset.datePickerReady){
+        input.dataset.datePickerReady='1';
+        input.addEventListener('click',function(){
+          openNativeDatePicker(input);
+        });
+      }
+
+      if(!input.parentElement || !input.parentElement.classList.contains('date-input-shell')){
+        const shell=document.createElement('div');
+        shell.className='date-input-shell';
+        input.parentNode.insertBefore(shell,input);
+        shell.appendChild(input);
+        const trigger=document.createElement('button');
+        trigger.type='button';
+        trigger.className='date-picker-trigger';
+        trigger.setAttribute('aria-label','開啟日期選擇器');
+        trigger.textContent='▦';
+        trigger.addEventListener('click',function(event){
+          event.preventDefault();
+          openNativeDatePicker(input);
+        });
+        shell.appendChild(trigger);
+      }
+
+      return input;
     }
 
     function addDateShortcuts(inputId){
-      const input=document.getElementById(inputId);
+      const input=prepareDateInput(inputId);
 
       if(!input || document.getElementById(inputId+'Shortcuts')){
         return;
@@ -1982,9 +2062,7 @@
     }
 
     function getTomorrowInputDate(){
-      const d=new Date();
-      d.setDate(d.getDate()+1);
-      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+      return getDateInputOffset(1);
     }
 
     function getDateKeyFromInput(value){
@@ -2264,7 +2342,7 @@
         importance.value=defaults.importance;
       }
       if(nextDate && defaults.nextFollowUpDate){
-        nextDate.value=defaults.nextFollowUpDate;
+        nextDate.value=normalizeDateForInput(defaults.nextFollowUpDate);
       }
       if(defaults.createSupervisorReminder){
         const checkbox=document.getElementById('createSupervisorReminder');
@@ -2373,7 +2451,7 @@
           replyContent:content,
           status:document.getElementById('bossReplyStatus').value,
           importance:document.getElementById('bossReplyImportance').value,
-          nextFollowUpDate:document.getElementById('bossReplyNextDate').value,
+          nextFollowUpDate:formatDateForSave(document.getElementById('bossReplyNextDate').value),
           createSupervisorReminder:createReminder,
           supervisorTitle:(document.getElementById('supervisorReminderTitle')||{}).value||'',
           supervisorContent:supervisorContent
@@ -2483,17 +2561,16 @@
     }
 
     function openBossDrilldown(type,filter){
-      const targetId=getDrilldownTargetId(type,filter);
-      const target=document.getElementById(targetId)||document.getElementById('bossDrilldown');
+      const anchorId=getDrilldownTargetId(type,filter);
+      const target=moveDrilldownPanelTo(anchorId);
       const requestKey=Date.now()+'_'+Math.random();
-      closeOtherDrilldowns(target.id);
-      activeDrilldown={type:type,filter:filter,targetId:target.id,requestKey:requestKey};
+      activeDrilldown={type:type,filter:filter,targetId:target.id,anchorId:anchorId,requestKey:requestKey};
       target.classList.add('show');
       target.innerHTML=
         '<div class="drilldown-head">'+
           '<div><div class="drilldown-title">明細檢視｜'+escapeHtml(getDrilldownTitle(type,filter))+'</div>'+
           '<div class="drilldown-meta">正在載入明細...</div></div>'+
-          '<button class="action action-secondary" onclick="closeBossDrilldown(&quot;'+escapeAttr(target.id)+'&quot;)">關閉明細</button>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
         '</div><div class="loading">載入中...</div>';
 
       jsonp({
@@ -2521,8 +2598,7 @@
     }
 
     function renderBossDrilldownDetail(detail,type,filter){
-      const targetId=(activeDrilldown&&activeDrilldown.type===type&&activeDrilldown.filter===filter&&activeDrilldown.targetId) || getDrilldownTargetId(type,filter);
-      const target=document.getElementById(targetId)||document.getElementById('bossDrilldown');
+      const target=getSingleDrilldownPanel();
       const data=dashboardData||{};
       const rows=detail.rows||[];
       const shown=rows.slice(0,100);
@@ -2532,7 +2608,7 @@
         '<div class="drilldown-head">'+
           '<div><div class="drilldown-title">明細檢視｜'+escapeHtml(detail.title||getDrilldownTitle(type,filter))+'</div>'+
           '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel||filter||'全部')+'｜筆數 '+num(total)+'｜最後更新 '+escapeHtml(detail.generatedAt||data.generatedAt||'')+'</div></div>'+
-          '<button class="action action-secondary" onclick="closeBossDrilldown(&quot;'+escapeAttr(target.id)+'&quot;)">關閉明細</button>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
         '</div>'+
         (detail.message?'<div class="empty">'+escapeHtml(detail.message)+'</div>':'')+
         (total>shown.length?'<div class="empty">目前顯示前 100 筆，請用篩選縮小範圍。</div>':'')+
@@ -2542,31 +2618,42 @@
       bindCaseButtons(target);
     }
 
-    function closeBossDrilldown(targetId){
-      const target=targetId?document.getElementById(targetId):document.getElementById((activeDrilldown&&activeDrilldown.targetId)||'bossDrilldown');
+    function closeBossDrilldown(){
+      const target=getSingleDrilldownPanel();
 
       if(target){
         target.classList.remove('show');
         target.innerHTML='';
       }
 
-      if(!targetId || (activeDrilldown&&activeDrilldown.targetId===targetId)){
-        activeDrilldown=null;
-      }
+      activeDrilldown=null;
     }
 
-    function closeOtherDrilldowns(keepId){
-      ['bossDrilldown','followupDrilldown','reminderDrilldown','signalDrilldown','caseDrilldown'].forEach(function(id){
-        if(id===keepId){
-          return;
-        }
+    function getSingleDrilldownPanel(){
+      let panel=document.getElementById('bossDrilldown');
 
-        const target=document.getElementById(id);
-        if(target){
-          target.classList.remove('show');
-          target.innerHTML='';
+      if(!panel){
+        panel=document.createElement('div');
+        panel.id='bossDrilldown';
+        panel.className='panel drilldown';
+        const fallback=document.getElementById('metricGrid') || document.querySelector('main');
+        if(fallback){
+          fallback.insertAdjacentElement('afterend',panel);
         }
-      });
+      }
+
+      return panel;
+    }
+
+    function moveDrilldownPanelTo(targetContainerId){
+      const panel=getSingleDrilldownPanel();
+      const anchor=document.getElementById(targetContainerId) || document.getElementById('metricGrid') || document.querySelector('main');
+
+      if(anchor && panel.previousElementSibling!==anchor){
+        anchor.insertAdjacentElement('afterend',panel);
+      }
+
+      return panel;
     }
 
     function refreshActiveDrilldown(){
@@ -2577,18 +2664,24 @@
 
     function getDrilldownTargetId(type,filter){
       if(type==='cases'){
-        return 'caseDrilldown';
+        return 'customerCaseBoard';
       }
       if(type==='followups'){
-        return 'followupDrilldown';
+        return 'followupBoard';
       }
       if(type==='reminders'){
-        return 'reminderDrilldown';
+        return 'supervisorReminderBoard';
       }
       if(type==='signals'){
-        return 'signalDrilldown';
+        return 'quickTagSummary';
       }
-      return 'bossDrilldown';
+      if(type==='reports' && filter==='pendingDrafts'){
+        return 'pendingDrafts';
+      }
+      if(type==='reports' && filter==='pendingAssignedCustomers'){
+        return 'unmatchedDrafts';
+      }
+      return 'metricGrid';
     }
 
     function getDrilldownTitle(type,filter){
@@ -2794,7 +2887,7 @@
 
       continueTrackingSource=row;
       document.getElementById('continueReplyId').value=replyId;
-      document.getElementById('continueNextDate').value=row.nextFollowUpDate||row.nextFollowDate||getTomorrowInputDate();
+      document.getElementById('continueNextDate').value=normalizeDateForInput(row.nextFollowUpDate||row.nextFollowDate||getTomorrowInputDate());
       document.getElementById('continueImportance').value=row.importance||row.latestBossImportance||'B';
       document.getElementById('continueNote').value='';
       modal.classList.add('show');
@@ -2820,7 +2913,7 @@
 
     function saveContinueTracking(){
       const replyId=document.getElementById('continueReplyId').value.trim();
-      const nextDate=document.getElementById('continueNextDate').value;
+      const nextDate=formatDateForSave(document.getElementById('continueNextDate').value);
       const importance=document.getElementById('continueImportance').value||'B';
       const note=document.getElementById('continueNote').value.trim();
       const btn=document.getElementById('continueSaveBtn');
@@ -2930,7 +3023,7 @@
       document.getElementById('caseStatus').value=data.status||'新案件';
       document.getElementById('caseImportance').value=data.importance||'B';
       document.getElementById('caseContent').value=data.content||'';
-      document.getElementById('caseNextFollowDate').value=data.nextFollowDate||getTomorrowInputDate();
+      document.getElementById('caseNextFollowDate').value=normalizeDateForInput(data.nextFollowDate||getTomorrowInputDate());
       document.getElementById('caseValue').value=data.caseValue||'中';
       document.getElementById('caseImpactType').value=data.impactType||'其他';
       document.getElementById('caseEstimatedAmount').value=data.estimatedAmount||'';
@@ -3029,7 +3122,7 @@
         impactType:document.getElementById('caseImpactType').value,
         estimatedAmount:document.getElementById('caseEstimatedAmount').value.trim(),
         estimatedProfit:document.getElementById('caseEstimatedProfit').value.trim(),
-        nextFollowDate:document.getElementById('caseNextFollowDate').value,
+        nextFollowDate:formatDateForSave(document.getElementById('caseNextFollowDate').value),
         note:document.getElementById('caseNote').value.trim(),
         closeResult:document.getElementById('caseNote').value.trim()
       };
