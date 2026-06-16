@@ -290,6 +290,7 @@
     .thread-modal{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;padding:14px;background:rgba(0,0,0,.68)}
     .thread-modal.show{display:flex}
     .thread-panel{width:min(860px,100%);max-height:92vh;overflow:auto;border:1px solid rgba(0,229,192,.25);border-radius:10px;background:#0b1118;box-shadow:var(--shadow);padding:14px}
+    .thread-panel.compact-panel{width:min(520px,100%)}
     .thread-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
     .thread-title{font-size:18px;font-weight:950;color:#fff}
     .thread-close{border:1px solid var(--line);background:rgba(255,255,255,.04);color:#fff;border-radius:8px;min-width:42px;min-height:42px;font-weight:900}
@@ -301,6 +302,9 @@
     .form-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
     .form-control{width:100%;border:1px solid rgba(0,229,192,.24);border-radius:8px;background:#080c11;color:#fff;min-height:44px;padding:10px;outline:none}
     textarea.form-control{min-height:112px;resize:vertical}
+    .date-shortcuts{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+    .date-shortcuts button{min-height:34px;border:1px solid rgba(0,229,192,.25);border-radius:999px;background:rgba(0,229,192,.08);color:#c8fff6;padding:6px 10px;font-size:12px;cursor:pointer}
+    .date-shortcuts button:hover{background:rgba(0,229,192,.16)}
     .history-results{display:grid;gap:8px;margin-top:10px}
     .history-card{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
     .toggle-btn{width:100%;border:1px solid rgba(0,229,192,.28);background:rgba(0,229,192,.08);color:#dffff9;border-radius:8px;min-height:44px;padding:9px 12px;font-weight:900;margin-top:10px}
@@ -321,6 +325,9 @@
     .result-btn:first-child{border-top:0}
     .detail{margin-top:10px;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:12px}
     .muted{color:var(--muted)}
+    .toast{position:fixed;right:16px;bottom:16px;z-index:90;max-width:min(360px,calc(100vw - 32px));padding:11px 14px;border:1px solid rgba(0,229,192,.35);border-radius:10px;background:rgba(9,18,26,.96);box-shadow:var(--shadow);color:#e8fbff;font-weight:800;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
+    .toast.show{opacity:1;transform:translateY(0)}
+    .toast.error{border-color:rgba(248,113,113,.55);color:#fee2e2}
 
     @media (min-width:769px){
       .shell{padding:18px}
@@ -423,6 +430,7 @@
         </div>
       </div>
       <div class="panel" id="followupBoard"></div>
+      <div class="panel drilldown" id="followupDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -432,6 +440,7 @@
         </div>
       </div>
       <div class="panel" id="supervisorReminderBoard"></div>
+      <div class="panel drilldown" id="reminderDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -441,6 +450,7 @@
         </div>
       </div>
       <div class="panel" id="quickTagSummary"></div>
+      <div class="panel drilldown" id="signalDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -450,6 +460,7 @@
         </div>
       </div>
       <div class="panel" id="customerCaseBoard"></div>
+      <div class="panel drilldown" id="caseDrilldown"></div>
 
       <div class="section-head section">
         <div>
@@ -632,6 +643,36 @@
     </div>
   </div>
 
+  <div class="thread-modal" id="continueTrackingModal" aria-hidden="true">
+    <div class="thread-panel compact-panel">
+      <div class="thread-head">
+        <div>
+          <div class="section-kicker">主管提醒</div>
+          <div class="thread-title">設定繼續追蹤</div>
+        </div>
+        <button class="thread-close" onclick="closeContinueTrackingModal()">×</button>
+      </div>
+      <div class="reply-form">
+        <input type="hidden" id="continueReplyId">
+        <label class="thread-label" for="continueNextDate">下次追蹤日</label>
+        <input class="form-control" id="continueNextDate" type="date">
+        <label class="thread-label" for="continueImportance">重要程度</label>
+        <select class="form-control" id="continueImportance">
+          <option value="A">重要程度 A</option>
+          <option value="B">重要程度 B</option>
+          <option value="C">重要程度 C</option>
+        </select>
+        <label class="thread-label" for="continueNote">追蹤備註（選填）</label>
+        <textarea class="form-control" id="continueNote" placeholder="例如：三天後確認是否回覆報價"></textarea>
+        <div class="actions">
+          <button class="action action-secondary" id="continueSaveBtn" onclick="saveContinueTracking()">儲存繼續追蹤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
   <script>
     const API_BASE='https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
     const API_TOKEN='CYCRM_2026_write_test';
@@ -647,6 +688,14 @@
     let activeQuickTagDetail=null;
     let activeReportThread=null;
     let pendingReplyDefaults=null;
+    let activeDrilldown=null;
+    let toastTimer=null;
+    let continueTrackingSource=null;
+    const modalSnapshots={
+      report:'',
+      case:'',
+      continueTracking:''
+    };
 
     document.getElementById('customerSearch').addEventListener('input',function(){
       ensureCustomersForSearch();
@@ -658,6 +707,7 @@
         queryReportHistory();
       }
     });
+    setupModalInteractions();
     loadDashboard();
 
     function loadDashboard(forceRefresh){
@@ -682,6 +732,166 @@
         console.log('boss dashboard error',err.message);
         setMessage('<div class="error">Boss 戰情資料載入失敗<br>'+escapeHtml(err.message)+'<br><button class="action action-secondary" style="margin-top:10px" onclick="loadDashboard(true)">重試</button></div>');
       });
+    }
+
+    function setupModalInteractions(){
+      Array.prototype.forEach.call(document.querySelectorAll('.thread-modal'),function(modal){
+        modal.addEventListener('click',function(event){
+          if(event.target===modal){
+            closeTopModal();
+          }
+        });
+      });
+
+      document.addEventListener('keydown',function(event){
+        if(event.key==='Escape'){
+          closeTopModal();
+        }
+      });
+    }
+
+    function closeTopModal(){
+      const openModals=Array.prototype.slice.call(document.querySelectorAll('.thread-modal.show'));
+      const modal=openModals[openModals.length-1];
+
+      if(!modal){
+        return;
+      }
+
+      if(modal.id==='continueTrackingModal'){
+        closeContinueTrackingModal();
+        return;
+      }
+
+      if(modal.id==='caseModal'){
+        closeCaseModal();
+        return;
+      }
+
+      if(modal.id==='reportThreadModal'){
+        closeReportThread();
+      }
+    }
+
+    function confirmCloseIfDirty(modalId){
+      if(!isModalDirty(modalId)){
+        return true;
+      }
+
+      return confirm('目前有未儲存內容，確定要關閉嗎？');
+    }
+
+    function isModalDirty(modalId){
+      if(modalId==='reportThreadModal'){
+        return getReportThreadSignature()!==modalSnapshots.report;
+      }
+
+      if(modalId==='caseModal'){
+        return getCaseModalSignature()!==modalSnapshots.case;
+      }
+
+      if(modalId==='continueTrackingModal'){
+        return getContinueTrackingSignature()!==modalSnapshots.continueTracking;
+      }
+
+      return false;
+    }
+
+    function getFieldValue(id){
+      const el=document.getElementById(id);
+
+      if(!el){
+        return '';
+      }
+
+      if(el.type==='checkbox'){
+        return el.checked?'1':'0';
+      }
+
+      return el.value||'';
+    }
+
+    function getReportThreadSignature(){
+      return [
+        getFieldValue('bossReplyContent'),
+        getFieldValue('bossReplyStatus'),
+        getFieldValue('bossReplyImportance'),
+        getFieldValue('bossReplyNextDate'),
+        getFieldValue('createSupervisorReminder'),
+        getFieldValue('supervisorReminderTitle'),
+        getFieldValue('supervisorReminderContent')
+      ].join('|');
+    }
+
+    function getCaseModalSignature(){
+      return [
+        'caseTitle','caseCustomerName','caseOwner','caseType','caseStatus','caseImportance',
+        'caseContent','caseNextFollowDate','caseValue','caseImpactType','caseEstimatedAmount',
+        'caseEstimatedProfit','caseNote'
+      ].map(getFieldValue).join('|');
+    }
+
+    function getContinueTrackingSignature(){
+      return [
+        getFieldValue('continueReplyId'),
+        getFieldValue('continueNextDate'),
+        getFieldValue('continueImportance'),
+        getFieldValue('continueNote')
+      ].join('|');
+    }
+
+    function showToast(message,type){
+      const toast=document.getElementById('toast');
+
+      if(!toast){
+        return;
+      }
+
+      clearTimeout(toastTimer);
+      toast.textContent=message||'';
+      toast.classList.toggle('error',type==='error');
+      toast.classList.add('show');
+      toastTimer=setTimeout(function(){
+        toast.classList.remove('show');
+      },type==='error'?3600:2400);
+    }
+
+    function getDateInputOffset(days){
+      const date=new Date();
+      date.setDate(date.getDate()+Number(days||0));
+      const y=date.getFullYear();
+      const m=String(date.getMonth()+1).padStart(2,'0');
+      const d=String(date.getDate()).padStart(2,'0');
+      return y+'-'+m+'-'+d;
+    }
+
+    function addDateShortcuts(inputId){
+      const input=document.getElementById(inputId);
+
+      if(!input || document.getElementById(inputId+'Shortcuts')){
+        return;
+      }
+
+      const wrap=document.createElement('div');
+      wrap.className='date-shortcuts';
+      wrap.id=inputId+'Shortcuts';
+      [
+        ['明天',1],
+        ['三天後',3],
+        ['下週',7],
+        ['清除日期','']
+      ].forEach(function(item){
+        const btn=document.createElement('button');
+        btn.type='button';
+        btn.textContent=item[0];
+        btn.addEventListener('click',function(){
+          input.value=item[1]===''?'':getDateInputOffset(item[1]);
+          input.dispatchEvent(new Event('input',{bubbles:true}));
+          input.dispatchEvent(new Event('change',{bubbles:true}));
+        });
+        wrap.appendChild(btn);
+      });
+      input.insertAdjacentElement('afterend',wrap);
     }
 
     function ensureCustomersForSearch(){
@@ -1113,6 +1323,55 @@
           '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
         '</div>'+
       '</div>';
+    }
+
+    function upsertLocalCustomerCase(row){
+      if(!dashboardData || !row){
+        return;
+      }
+
+      const summary=dashboardData.customerCaseSummary||{rows:[]};
+      const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const caseId=row.caseId||'';
+      let found=false;
+      const nextRows=rows.map(function(item){
+        if(caseId && item.caseId===caseId){
+          found=true;
+          return Object.assign({},item,row);
+        }
+        return item;
+      });
+
+      if(!found){
+        nextRows.unshift(row);
+      }
+
+      summary.rows=nextRows;
+      dashboardData.customerCaseSummary=recalculateCustomerCaseSummary(summary);
+      renderCustomerCaseBoard(dashboardData.customerCaseSummary||{});
+      renderSignalFunnel(dashboardData||{});
+      refreshActiveDrilldown();
+    }
+
+    function recalculateCustomerCaseSummary(summary){
+      const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const todayKey=getLocalDateKey(new Date());
+      const openRows=rows.filter(function(row){
+        return ['結案','取消'].indexOf(String(row.status||'').trim())===-1;
+      });
+
+      openRows.forEach(function(row){
+        const key=getDateKeyFromInput(row.nextFollowDate);
+        row.isOverdue=!!(key && key<todayKey);
+        row.isDueToday=!!(key && key===todayKey);
+      });
+
+      summary.rows=openRows;
+      summary.totalCount=openRows.length;
+      summary.aLevelCount=openRows.filter(function(row){return String(row.importance||'').toUpperCase()==='A';}).length;
+      summary.overdueCount=openRows.filter(function(row){return !!row.isOverdue;}).length;
+      summary.dueTodayCount=openRows.filter(function(row){return !!row.isDueToday;}).length;
+      return summary;
     }
 
     function renderQuickTagSummary(summary){
@@ -1571,6 +1830,96 @@
       return board;
     }
 
+    function normalizeSupervisorStatus(value){
+      const status=String(value||'').trim();
+      return ['待處理','待Boss確認','已關閉','撤回'].indexOf(status)!==-1 ? status : '待處理';
+    }
+
+    function isClosedSupervisorStatus(value){
+      const status=normalizeSupervisorStatus(value);
+      return status==='已關閉' || status==='撤回';
+    }
+
+    function findSupervisorReminderLocal(replyId){
+      const rows=(((dashboardData||{}).supervisorReminderSummary||{}).rows)||[];
+      return rows.find(function(row){return row.replyId===replyId;})||null;
+    }
+
+    function findFollowupLocal(replyId){
+      const rows=(((dashboardData||{}).followupBoard||{}).items)||[];
+      return rows.find(function(row){return row.replyId===replyId;})||null;
+    }
+
+    function applyLocalSupervisorReminderPatch(replyId,patch){
+      if(!dashboardData){
+        return;
+      }
+
+      patch=patch||{};
+      const summary=dashboardData.supervisorReminderSummary||{rows:[]};
+      summary.rows=(Array.isArray(summary.rows)?summary.rows:[]).map(function(row){
+        if(row.replyId!==replyId){
+          return row;
+        }
+
+        return Object.assign({},row,patch);
+      });
+      dashboardData.supervisorReminderSummary=recalculateSupervisorReminderSummary(summary);
+
+      const followupBoard=dashboardData.followupBoard||{items:[]};
+      if(Array.isArray(followupBoard.items)){
+        followupBoard.items=followupBoard.items.map(function(item){
+          if(item.replyId!==replyId){
+            return item;
+          }
+
+          const next=Object.assign({},item);
+          if(patch.importance || patch.latestBossImportance){
+            next.latestBossImportance=patch.latestBossImportance||patch.importance;
+          }
+          if(patch.nextFollowUpDate || patch.nextFollowDate){
+            next.nextFollowDate=patch.nextFollowDate||patch.nextFollowUpDate;
+          }
+          if(patch.supervisorStatus==='待處理'){
+            next.latestBossStatus='需追蹤';
+            next.followupBucket='需追蹤';
+          }
+          next.isOverdue=normalizeBossStatus(next.latestBossStatus)==='需追蹤' && getDateKeyFromInput(next.nextFollowDate) && getDateKeyFromInput(next.nextFollowDate)<getLocalDateKey(new Date());
+          next.isDueToday=normalizeBossStatus(next.latestBossStatus)==='需追蹤' && getDateKeyFromInput(next.nextFollowDate) && getDateKeyFromInput(next.nextFollowDate)===getLocalDateKey(new Date());
+          next.urgencyScore=calculateClientUrgency(next);
+          return next;
+        }).sort(compareClientFollowupItems);
+        dashboardData.followupBoard=recalculateClientFollowupBoard(followupBoard);
+      }
+
+      renderSupervisorReminderBoard(dashboardData.supervisorReminderSummary||{});
+      renderFollowupBoard(dashboardData.followupBoard||{});
+      renderSignalFunnel(dashboardData||{});
+      refreshActiveDrilldown();
+    }
+
+    function recalculateSupervisorReminderSummary(summary){
+      const rows=(Array.isArray(summary.rows)?summary.rows:[]).filter(function(row){
+        return !isClosedSupervisorStatus(row.supervisorStatus);
+      });
+      const todayKey=getLocalDateKey(new Date());
+
+      rows.forEach(function(row){
+        const dateKey=getDateKeyFromInput(row.nextFollowUpDate);
+        row.isOverdue=!!(dateKey && dateKey<todayKey);
+        row.isDueToday=!!(dateKey && dateKey===todayKey);
+      });
+
+      summary.rows=rows;
+      summary.totalCount=rows.length;
+      summary.pendingCount=rows.filter(function(row){return normalizeSupervisorStatus(row.supervisorStatus)==='待處理';}).length;
+      summary.pendingBossConfirmCount=rows.filter(function(row){return normalizeSupervisorStatus(row.supervisorStatus)==='待Boss確認';}).length;
+      summary.overdueCount=rows.filter(function(row){return !!row.isOverdue;}).length;
+      summary.dueTodayCount=rows.filter(function(row){return !!row.isDueToday;}).length;
+      summary.aLevelCount=rows.filter(function(row){return String(row.importance||'').toUpperCase()==='A';}).length;
+      return summary;
+    }
+
     function calculateClientUrgency(item){
       let score=0;
       const status=normalizeBossStatus(item.latestBossStatus);
@@ -1781,7 +2130,7 @@
 
     function openReportThread(reportId,defaults){
       if(!reportId){
-        alert('這筆回報缺少回報ID，請重新整理後再試。');
+        showToast('這筆回報缺少回報ID，請重新整理後再試。','error');
         return;
       }
 
@@ -1791,6 +2140,7 @@
       modal.setAttribute('aria-hidden','false');
       document.getElementById('threadTitle').textContent='查看 / 處理';
       document.getElementById('threadBody').innerHTML='<div class="loading">載入回報內容中...</div>';
+      modalSnapshots.report=getReportThreadSignature();
 
       jsonp({
         action:'getBossReportThread',
@@ -1806,12 +2156,18 @@
       });
     }
 
-    function closeReportThread(){
+    function closeReportThread(force){
       const modal=document.getElementById('reportThreadModal');
+
+      if(!force && !confirmCloseIfDirty('reportThreadModal')){
+        return;
+      }
+
       modal.classList.remove('show');
       modal.setAttribute('aria-hidden','true');
       activeReportThread=null;
       pendingReplyDefaults=null;
+      modalSnapshots.report='';
     }
 
     function renderReportThread(data,message,defaults){
@@ -1886,6 +2242,10 @@
         });
       }
       applyReplyDefaults(defaults||pendingReplyDefaults);
+      addDateShortcuts('bossReplyNextDate');
+      setTimeout(function(){
+        modalSnapshots.report=getReportThreadSignature();
+      },0);
     }
 
     function applyReplyDefaults(defaults){
@@ -1982,14 +2342,14 @@
 
     function saveBossReply(){
       if(!activeReportThread || !activeReportThread.report || !activeReportThread.report.reportId){
-        alert('找不到目前回報，請重新開啟討論串。');
+        showToast('找不到目前回報，請重新開啟討論串。','error');
         return;
       }
 
       const content=document.getElementById('bossReplyContent').value.trim();
 
       if(content.length>300){
-        alert('回覆內容請控制在 300 字內。');
+        showToast('回覆內容請控制在 300 字內。','error');
         return;
       }
 
@@ -1997,7 +2357,7 @@
       const supervisorContent=((document.getElementById('supervisorReminderContent')||{}).value||'').trim();
 
       if(createReminder && !supervisorContent){
-        alert('建立主管提醒時，請填主管提醒內容。');
+        showToast('建立主管提醒時，請填主管提醒內容。','error');
         return;
       }
 
@@ -2031,9 +2391,10 @@
         renderSignalFunnel(dashboardData||{});
         renderReportSummary((dashboardData&&dashboardData.reportSummary)||{});
         renderFollowupBoard((dashboardData&&dashboardData.followupBoard)||{});
-        renderReportThread(activeReportThread,'回覆已儲存。');
+        renderReportThread(activeReportThread,'處理已儲存。');
+        showToast('已儲存處理');
       }).catch(function(err){
-        alert('儲存失敗：'+err.message);
+        showToast('儲存失敗：'+err.message,'error');
         btn.disabled=false;
         btn.textContent='儲存處理';
       });
@@ -2097,11 +2458,11 @@
           source:'boss_manual_link'
         })
       }).then(function(){
-        alert('已關聯主管提醒，狀態改為待 Boss 確認。');
+        showToast('已關聯主管提醒，狀態改為待 Boss 確認。');
         openReportThread(report.reportId,{message:'已關聯主管提醒。'});
-        loadDashboard(true);
+        refreshActiveDrilldown();
       }).catch(function(err){
-        alert('關聯失敗：'+err.message);
+        showToast('關聯失敗：'+err.message,'error');
       });
     }
 
@@ -2122,15 +2483,18 @@
     }
 
     function openBossDrilldown(type,filter){
-      const target=document.getElementById('bossDrilldown');
+      const targetId=getDrilldownTargetId(type,filter);
+      const target=document.getElementById(targetId)||document.getElementById('bossDrilldown');
+      const requestKey=Date.now()+'_'+Math.random();
+      closeOtherDrilldowns(target.id);
+      activeDrilldown={type:type,filter:filter,targetId:target.id,requestKey:requestKey};
       target.classList.add('show');
       target.innerHTML=
         '<div class="drilldown-head">'+
-          '<div><div class="drilldown-title">明細檢視</div>'+
+          '<div><div class="drilldown-title">明細檢視｜'+escapeHtml(getDrilldownTitle(type,filter))+'</div>'+
           '<div class="drilldown-meta">正在載入明細...</div></div>'+
-          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown(&quot;'+escapeAttr(target.id)+'&quot;)">關閉明細</button>'+
         '</div><div class="loading">載入中...</div>';
-      target.scrollIntoView({behavior:'smooth',block:'start'});
 
       jsonp({
         action:'getBossDrilldown',
@@ -2141,8 +2505,14 @@
           limit:100
         })
       }).then(function(detail){
+        if(!activeDrilldown || activeDrilldown.requestKey!==requestKey){
+          return;
+        }
         renderBossDrilldownDetail(detail||{},type,filter);
       }).catch(function(err){
+        if(!activeDrilldown || activeDrilldown.requestKey!==requestKey){
+          return;
+        }
         console.log('boss drilldown api failed, fallback to preview',err.message);
         const detail=getDrilldownRows(type,filter);
         detail.message='明細 API 載入失敗，以下為首頁預覽資料：'+err.message;
@@ -2151,7 +2521,8 @@
     }
 
     function renderBossDrilldownDetail(detail,type,filter){
-      const target=document.getElementById('bossDrilldown');
+      const targetId=(activeDrilldown&&activeDrilldown.type===type&&activeDrilldown.filter===filter&&activeDrilldown.targetId) || getDrilldownTargetId(type,filter);
+      const target=document.getElementById(targetId)||document.getElementById('bossDrilldown');
       const data=dashboardData||{};
       const rows=detail.rows||[];
       const shown=rows.slice(0,100);
@@ -2159,9 +2530,9 @@
 
       target.innerHTML=
         '<div class="drilldown-head">'+
-          '<div><div class="drilldown-title">'+escapeHtml(detail.title||'明細檢視')+'</div>'+
+          '<div><div class="drilldown-title">明細檢視｜'+escapeHtml(detail.title||getDrilldownTitle(type,filter))+'</div>'+
           '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel||filter||'全部')+'｜筆數 '+num(total)+'｜最後更新 '+escapeHtml(detail.generatedAt||data.generatedAt||'')+'</div></div>'+
-          '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
+          '<button class="action action-secondary" onclick="closeBossDrilldown(&quot;'+escapeAttr(target.id)+'&quot;)">關閉明細</button>'+
         '</div>'+
         (detail.message?'<div class="empty">'+escapeHtml(detail.message)+'</div>':'')+
         (total>shown.length?'<div class="empty">目前顯示前 100 筆，請用篩選縮小範圍。</div>':'')+
@@ -2171,10 +2542,64 @@
       bindCaseButtons(target);
     }
 
-    function closeBossDrilldown(){
-      const target=document.getElementById('bossDrilldown');
-      target.classList.remove('show');
-      target.innerHTML='';
+    function closeBossDrilldown(targetId){
+      const target=targetId?document.getElementById(targetId):document.getElementById((activeDrilldown&&activeDrilldown.targetId)||'bossDrilldown');
+
+      if(target){
+        target.classList.remove('show');
+        target.innerHTML='';
+      }
+
+      if(!targetId || (activeDrilldown&&activeDrilldown.targetId===targetId)){
+        activeDrilldown=null;
+      }
+    }
+
+    function closeOtherDrilldowns(keepId){
+      ['bossDrilldown','followupDrilldown','reminderDrilldown','signalDrilldown','caseDrilldown'].forEach(function(id){
+        if(id===keepId){
+          return;
+        }
+
+        const target=document.getElementById(id);
+        if(target){
+          target.classList.remove('show');
+          target.innerHTML='';
+        }
+      });
+    }
+
+    function refreshActiveDrilldown(){
+      if(activeDrilldown){
+        openBossDrilldown(activeDrilldown.type,activeDrilldown.filter);
+      }
+    }
+
+    function getDrilldownTargetId(type,filter){
+      if(type==='cases'){
+        return 'caseDrilldown';
+      }
+      if(type==='followups'){
+        return 'followupDrilldown';
+      }
+      if(type==='reminders'){
+        return 'reminderDrilldown';
+      }
+      if(type==='signals'){
+        return 'signalDrilldown';
+      }
+      return 'bossDrilldown';
+    }
+
+    function getDrilldownTitle(type,filter){
+      if(type==='cases') return '客戶案件';
+      if(type==='followups') return '短追蹤';
+      if(type==='reminders') return '主管提醒';
+      if(type==='signals') return getSignalFilterLabel(filter);
+      if(type==='reports' && filter==='today') return '今日回報';
+      if(type==='reports' && filter==='pendingDrafts') return '待補回報';
+      if(type==='reports' && filter==='pendingAssignedCustomers') return '待指定客戶';
+      return '明細';
     }
 
     function getDrilldownRows(type,filter){
@@ -2344,10 +2769,14 @@
           replyId:replyId
         })
       }).then(function(){
-        alert('主管提醒已關閉');
-        loadDashboard(true);
+        applyLocalSupervisorReminderPatch(replyId,{
+          supervisorStatus:'已關閉',
+          bossConfirmedAt:'已更新',
+          bossConfirmResult:'已關閉'
+        });
+        showToast('已關閉提醒');
       }).catch(function(err){
-        alert('更新主管提醒失敗：'+err.message);
+        showToast('更新主管提醒失敗：'+err.message,'error');
       });
     }
 
@@ -2356,17 +2785,83 @@
         return;
       }
 
+      openContinueTrackingModal(replyId);
+    }
+
+    function openContinueTrackingModal(replyId){
+      const row=findSupervisorReminderLocal(replyId) || findFollowupLocal(replyId) || {};
+      const modal=document.getElementById('continueTrackingModal');
+
+      continueTrackingSource=row;
+      document.getElementById('continueReplyId').value=replyId;
+      document.getElementById('continueNextDate').value=row.nextFollowUpDate||row.nextFollowDate||getTomorrowInputDate();
+      document.getElementById('continueImportance').value=row.importance||row.latestBossImportance||'B';
+      document.getElementById('continueNote').value='';
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden','false');
+      addDateShortcuts('continueNextDate');
+      setTimeout(function(){
+        modalSnapshots.continueTracking=getContinueTrackingSignature();
+      },0);
+    }
+
+    function closeContinueTrackingModal(force){
+      const modal=document.getElementById('continueTrackingModal');
+
+      if(!force && !confirmCloseIfDirty('continueTrackingModal')){
+        return;
+      }
+
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden','true');
+      continueTrackingSource=null;
+      modalSnapshots.continueTracking='';
+    }
+
+    function saveContinueTracking(){
+      const replyId=document.getElementById('continueReplyId').value.trim();
+      const nextDate=document.getElementById('continueNextDate').value;
+      const importance=document.getElementById('continueImportance').value||'B';
+      const note=document.getElementById('continueNote').value.trim();
+      const btn=document.getElementById('continueSaveBtn');
+
+      if(!replyId){
+        showToast('找不到主管提醒，請重新開啟。','error');
+        return;
+      }
+
+      btn.disabled=true;
+      btn.textContent='儲存中...';
+
+      const payload={
+        replyId:replyId,
+        nextFollowUpDate:nextDate,
+        importance:importance
+      };
+
+      if(note){
+        payload.bossConfirmResult='繼續追蹤：'+note;
+      }
+
       jsonp({
         action:'reopenSupervisorReminderByBoss',
         token:API_TOKEN,
-        payload:JSON.stringify({
-          replyId:replyId
-        })
+        payload:JSON.stringify(payload)
       }).then(function(){
-        alert('已改回待處理');
-        loadDashboard(true);
+        applyLocalSupervisorReminderPatch(replyId,{
+          supervisorStatus:'待處理',
+          nextFollowUpDate:nextDate,
+          nextFollowDate:nextDate,
+          importance:importance,
+          latestBossImportance:importance
+        });
+        closeContinueTrackingModal(true);
+        showToast('已設定繼續追蹤');
       }).catch(function(err){
-        alert('更新主管提醒失敗：'+err.message);
+        showToast('更新主管提醒失敗：'+err.message,'error');
+      }).finally(function(){
+        btn.disabled=false;
+        btn.textContent='儲存繼續追蹤';
       });
     }
 
@@ -2386,10 +2881,14 @@
           replyId:replyId
         })
       }).then(function(){
-        alert('主管提醒已撤回');
-        loadDashboard(true);
+        applyLocalSupervisorReminderPatch(replyId,{
+          supervisorStatus:'撤回',
+          bossConfirmedAt:'已更新',
+          bossConfirmResult:'撤回'
+        });
+        showToast('主管提醒已撤回');
       }).catch(function(err){
-        alert('撤回主管提醒失敗：'+err.message);
+        showToast('撤回主管提醒失敗：'+err.message,'error');
       });
     }
 
@@ -2439,11 +2938,20 @@
       document.getElementById('caseNote').value=data.note||data.closeResult||'';
       document.getElementById('caseModal').classList.add('show');
       document.getElementById('caseModal').setAttribute('aria-hidden','false');
+      addDateShortcuts('caseNextFollowDate');
+      setTimeout(function(){
+        modalSnapshots.case=getCaseModalSignature();
+      },0);
     }
 
-    function closeCaseModal(){
+    function closeCaseModal(force){
+      if(!force && !confirmCloseIfDirty('caseModal')){
+        return;
+      }
+
       document.getElementById('caseModal').classList.remove('show');
       document.getElementById('caseModal').setAttribute('aria-hidden','true');
+      modalSnapshots.case='';
     }
 
     function openCaseModalFromSignal(reportId){
@@ -2527,7 +3035,7 @@
       };
 
       if(!payload.title || !payload.customerName || !payload.content){
-        alert('請確認客戶名稱、案件標題與案件內容。');
+        showToast('請確認客戶名稱、案件標題與案件內容。','error');
         return;
       }
 
@@ -2541,12 +3049,13 @@
         payload:JSON.stringify(payload)
       }).then(function(result){
         if(result.warning){
-          alert(result.warning);
+          showToast(result.warning,'error');
         }
-        closeCaseModal();
-        loadDashboard(true);
+        upsertLocalCustomerCase(result.case||payload);
+        closeCaseModal(true);
+        showToast(caseId?'已更新案件':'已建立案件');
       }).catch(function(err){
-        alert('案件儲存失敗：'+err.message);
+        showToast('案件儲存失敗：'+err.message,'error');
       }).finally(function(){
         btn.disabled=false;
         btn.textContent='儲存案件';
@@ -2639,10 +3148,16 @@
         })
       }).then(function(){
         console.log('void unmatched draft success',draftId);
-        loadDashboard(true);
+        if(dashboardData && Array.isArray(dashboardData.unmatchedDrafts)){
+          dashboardData.unmatchedDrafts=dashboardData.unmatchedDrafts.filter(function(row){
+            return row.draftId!==draftId;
+          });
+          renderUnmatchedDrafts(dashboardData.unmatchedDrafts);
+        }
+        showToast('已作廢草稿');
       }).catch(function(err){
         console.log('void unmatched draft failed',err.message);
-        alert('作廢失敗：'+err.message);
+        showToast('作廢失敗：'+err.message,'error');
       });
     }
 
