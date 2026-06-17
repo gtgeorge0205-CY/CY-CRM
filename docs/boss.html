@@ -415,7 +415,7 @@
         </div>
       </div>
       <div class="grid" id="metricGrid"></div>
-      <div class="panel drilldown" id="bossDrilldown"></div>
+      <div class="panel drilldown boss-drilldown-panel" id="bossDrilldownPanel" data-drilldown-panel="true"></div>
 
       <div class="section-head section">
         <div>
@@ -1466,8 +1466,7 @@
 
       target.innerHTML=
         '<div class="report-meta">'+escapeHtml(summary.rangeLabel||'最近30天')+'｜共 '+num(summary.totalCount||0)+' 筆訊號相關回報</div>'+
-        '<div class="quick-tag-summary-grid">'+groups.map(renderQuickTagGroup).join('')+'</div>'+
-        '<div class="quick-tag-detail" id="quickTagDetail">'+renderQuickTagDetail()+'</div>';
+        '<div class="quick-tag-summary-grid">'+groups.map(renderQuickTagGroup).join('')+'</div>';
 
       Array.prototype.forEach.call(target.querySelectorAll('[data-quick-tag]'),function(btn){
         btn.addEventListener('click',function(){
@@ -2619,7 +2618,7 @@
     }
 
     function closeBossDrilldown(){
-      const target=getSingleDrilldownPanel();
+      const target=document.getElementById('bossDrilldownPanel');
 
       if(target){
         target.classList.remove('show');
@@ -2630,24 +2629,66 @@
     }
 
     function getSingleDrilldownPanel(){
-      let panel=document.getElementById('bossDrilldown');
+      let panel=document.getElementById('bossDrilldownPanel') || document.getElementById('bossDrilldown');
+      cleanupExtraDrilldownPanels(panel);
 
       if(!panel){
         panel=document.createElement('div');
-        panel.id='bossDrilldown';
-        panel.className='panel drilldown';
+        panel.id='bossDrilldownPanel';
+        panel.className='panel drilldown boss-drilldown-panel';
+        panel.setAttribute('data-drilldown-panel','true');
         const fallback=document.getElementById('metricGrid') || document.querySelector('main');
         if(fallback){
           fallback.insertAdjacentElement('afterend',panel);
         }
+      }else{
+        panel.id='bossDrilldownPanel';
+        panel.classList.add('panel','drilldown','boss-drilldown-panel');
+        panel.setAttribute('data-drilldown-panel','true');
       }
 
       return panel;
     }
 
+    function cleanupExtraDrilldownPanels(keepPanel){
+      const selectors=[
+        '.boss-drilldown-panel',
+        '.drilldown-panel',
+        '.boss-detail-panel',
+        '[data-drilldown-panel="true"]',
+        '#bossDrilldown',
+        '#followupDrilldown',
+        '#reminderDrilldown',
+        '#signalDrilldown',
+        '#caseDrilldown'
+      ];
+      const seen=[];
+
+      selectors.forEach(function(selector){
+        Array.prototype.forEach.call(document.querySelectorAll(selector),function(node){
+          if(seen.indexOf(node)!==-1){
+            return;
+          }
+          seen.push(node);
+
+          if(keepPanel && node===keepPanel){
+            return;
+          }
+
+          if(node.id==='bossDrilldownPanel' && !keepPanel){
+            return;
+          }
+
+          node.parentNode&&node.parentNode.removeChild(node);
+        });
+      });
+    }
+
     function moveDrilldownPanelTo(targetContainerId){
       const panel=getSingleDrilldownPanel();
       const anchor=document.getElementById(targetContainerId) || document.getElementById('metricGrid') || document.querySelector('main');
+
+      cleanupExtraDrilldownPanels(panel);
 
       if(anchor && panel.previousElementSibling!==anchor){
         anchor.insertAdjacentElement('afterend',panel);
@@ -2663,35 +2704,41 @@
     }
 
     function getDrilldownTargetId(type,filter){
-      if(type==='cases'){
+      const normalizedType=String(type||'');
+      const normalizedFilter=String(filter||'');
+
+      if(['cases','customerCases'].indexOf(normalizedType)!==-1){
         return 'customerCaseBoard';
       }
-      if(type==='followups'){
+      if(['followups','shortFollowup','needFollowup'].indexOf(normalizedType)!==-1){
         return 'followupBoard';
       }
-      if(type==='reminders'){
+      if(['reminders','supervisorReminders'].indexOf(normalizedType)!==-1){
         return 'supervisorReminderBoard';
       }
-      if(type==='signals'){
+      if(['signals','actionSignals','quickTags'].indexOf(normalizedType)!==-1){
         return 'quickTagSummary';
       }
-      if(type==='reports' && filter==='pendingDrafts'){
+      if((normalizedType==='reports' || normalizedType==='report' || normalizedType==='todayReports') && normalizedFilter==='pendingDrafts'){
         return 'pendingDrafts';
       }
-      if(type==='reports' && filter==='pendingAssignedCustomers'){
+      if((normalizedType==='reports' || normalizedType==='report') && (normalizedFilter==='pendingAssignedCustomers' || normalizedFilter==='pendingCustomers')){
         return 'unmatchedDrafts';
       }
       return 'metricGrid';
     }
 
     function getDrilldownTitle(type,filter){
-      if(type==='cases') return '客戶案件';
-      if(type==='followups') return '短追蹤';
-      if(type==='reminders') return '主管提醒';
-      if(type==='signals') return getSignalFilterLabel(filter);
-      if(type==='reports' && filter==='today') return '今日回報';
-      if(type==='reports' && filter==='pendingDrafts') return '待補回報';
-      if(type==='reports' && filter==='pendingAssignedCustomers') return '待指定客戶';
+      const normalizedType=String(type||'');
+      const normalizedFilter=String(filter||'');
+
+      if(['cases','customerCases'].indexOf(normalizedType)!==-1) return '客戶案件';
+      if(['followups','shortFollowup','needFollowup'].indexOf(normalizedType)!==-1) return '短追蹤';
+      if(['reminders','supervisorReminders'].indexOf(normalizedType)!==-1) return '主管提醒';
+      if(['signals','actionSignals','quickTags'].indexOf(normalizedType)!==-1) return getSignalFilterLabel(filter);
+      if((normalizedType==='reports' || normalizedType==='report' || normalizedType==='todayReports') && (normalizedFilter==='today' || normalizedType==='todayReports')) return '今日回報';
+      if((normalizedType==='reports' || normalizedType==='report') && normalizedFilter==='pendingDrafts') return '待補回報';
+      if((normalizedType==='reports' || normalizedType==='report') && (normalizedFilter==='pendingAssignedCustomers' || normalizedFilter==='pendingCustomers')) return '待指定客戶';
       return '明細';
     }
 
