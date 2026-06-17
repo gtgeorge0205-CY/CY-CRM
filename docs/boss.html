@@ -77,6 +77,109 @@
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
     }
 
+    .boss-workbench{
+      display:grid;
+      grid-template-columns:220px minmax(0,1fr);
+      gap:14px;
+      align-items:start;
+      margin-top:14px;
+    }
+    .workspace-nav{
+      position:sticky;
+      top:12px;
+      display:grid;
+      gap:8px;
+      border:1px solid rgba(0,229,192,.2);
+      border-radius:8px;
+      background:linear-gradient(180deg,#0d141b,#080d12);
+      box-shadow:0 14px 34px rgba(0,0,0,.24);
+      padding:10px;
+    }
+    .workspace-nav-title{
+      color:var(--teal);
+      font-size:12px;
+      font-weight:950;
+      padding:4px 4px 2px;
+    }
+    .workspace-tab{
+      width:100%;
+      min-height:46px;
+      border:1px solid var(--line-soft);
+      border-radius:8px;
+      background:rgba(255,255,255,.026);
+      color:var(--silver);
+      text-align:left;
+      padding:9px 10px;
+      font-weight:900;
+    }
+    .workspace-tab.active{
+      border-color:rgba(0,229,192,.5);
+      background:linear-gradient(90deg,rgba(0,229,192,.16),rgba(0,229,192,.04));
+      color:#eafffb;
+      box-shadow:inset 3px 0 0 var(--teal);
+    }
+    .workspace-main{min-width:0}
+    .workspace-panel{display:none}
+    .workspace-panel.active{display:block}
+    .workspace-hero{
+      border:1px solid rgba(0,229,192,.22);
+      border-radius:8px;
+      background:linear-gradient(135deg,rgba(0,229,192,.08),rgba(17,24,32,.72));
+      padding:13px 14px;
+      margin-bottom:12px;
+    }
+    .workspace-title{
+      margin:0;
+      color:#fff;
+      font-size:20px;
+      font-weight:950;
+      line-height:1.25;
+    }
+    .workspace-desc{
+      margin-top:5px;
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.6;
+    }
+    .workspace-tools{
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+      margin:10px 0 12px;
+    }
+    .workspace-chip{
+      border:1px solid var(--line-soft);
+      border-radius:8px;
+      background:rgba(255,255,255,.032);
+      color:var(--silver);
+      min-height:38px;
+      padding:7px 10px;
+      font-weight:900;
+    }
+    .workspace-chip.active{
+      border-color:rgba(0,229,192,.48);
+      background:var(--teal-soft);
+      color:#dffff9;
+    }
+    .workspace-group{margin-top:14px}
+    .workspace-group:first-child{margin-top:0}
+    .overview-priority{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:9px;
+    }
+    .priority-card{
+      border:1px solid var(--line-soft);
+      border-radius:8px;
+      background:rgba(255,255,255,.026);
+      padding:10px;
+      min-height:84px;
+    }
+    .priority-card.warn{border-color:rgba(250,204,21,.35);background:rgba(250,204,21,.07)}
+    .priority-card.danger{border-color:rgba(248,113,113,.38);background:rgba(248,113,113,.08)}
+    .priority-card strong{display:block;color:#fff;font-size:26px;line-height:1}
+    .priority-card span{display:block;color:var(--muted);font-size:12px;font-weight:900;margin-top:7px}
+
     .section{margin-top:14px}
     .section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:8px}
     .section-head.section{margin-top:26px;padding-top:16px;border-top:1px solid rgba(0,229,192,.16)}
@@ -358,6 +461,13 @@
       .title{font-size:21px;line-height:1.16;word-break:keep-all}
       .subtitle{font-size:12px;line-height:1.35}
       .refresh{min-height:44px;padding:8px 10px}
+      .boss-workbench{display:block;margin-top:10px}
+      .workspace-nav{position:relative;top:auto;display:flex;overflow-x:auto;margin-bottom:10px;padding:8px}
+      .workspace-nav-title{display:none}
+      .workspace-tab{flex:0 0 auto;white-space:nowrap;min-height:42px}
+      .workspace-hero{padding:11px 12px}
+      .workspace-title{font-size:18px}
+      .overview-priority{grid-template-columns:1fr}
       .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
       .metric{min-height:106px;padding:11px}
       .metric-value{font-size:38px;min-height:38px}
@@ -397,7 +507,7 @@
       <div class="topbar-content">
         <div class="eyebrow">即時營運看板</div>
         <div class="title">新晴揚 BOSS 戰情中心</div>
-        <div class="subtitle">客戶訊號漏斗｜經營警示｜現場回報</div>
+        <div class="subtitle">Boss 工作台｜回報訊號｜追蹤提醒｜客戶案件</div>
         <div class="sub">最後更新：<span id="generatedAt">尚未載入</span></div>
       </div>
       <button class="refresh" onclick="loadDashboard(true)">重新整理</button>
@@ -408,143 +518,205 @@
     </section>
 
     <section class="section" id="dashboard" style="display:none">
-      <div class="section-head">
-        <div>
-          <div class="section-kicker">今日總覽</div>
-          <h2 class="section-title">今日總覽</h2>
-        </div>
-      </div>
-      <div class="grid" id="metricGrid"></div>
-      <div class="panel drilldown boss-drilldown-panel" id="bossDrilldownPanel" data-drilldown-panel="true"></div>
+      <div class="boss-workbench">
+        <nav class="workspace-nav" aria-label="Boss 工作區導覽">
+          <div class="workspace-nav-title">Boss 工作區</div>
+          <button class="workspace-tab active" data-workspace-target="overview">今日總覽</button>
+          <button class="workspace-tab" data-workspace-target="reports">回報訊號</button>
+          <button class="workspace-tab" data-workspace-target="tracking">追蹤提醒</button>
+          <button class="workspace-tab" data-workspace-target="cases">客戶案件</button>
+          <button class="workspace-tab" data-workspace-target="search">客戶查詢</button>
+        </nav>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">客戶訊號漏斗</div>
-          <h2 class="section-title">客戶訊號漏斗</h2>
-          <div class="section-desc">發現訊號 → 短期追蹤 → 升級案件</div>
-        </div>
-      </div>
-      <div class="signal-funnel" id="signalFunnel"></div>
+        <div class="workspace-main">
+          <section class="workspace-panel active" id="workspace-overview" data-workspace-panel="overview">
+            <div class="workspace-hero">
+              <div class="section-kicker">今日總覽</div>
+              <h2 class="workspace-title">今天要注意什麼</h2>
+              <div class="workspace-desc">先看 KPI、今日優先事項、經營警示與待補 / 待指定資料；明細處理請切到對應工作區。</div>
+            </div>
+            <div class="grid" id="metricGrid"></div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">待處理事項</div>
-          <h2 class="section-title">待處理事項</h2>
-          <div class="section-desc">短追蹤、主管提醒與客戶案件集中處理；老闆已判斷需要短期追蹤的事項會優先出現在這裡。</div>
-        </div>
-      </div>
-      <div class="panel" id="followupBoard"></div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">今日優先事項</div>
+                  <h2 class="section-title">今日優先事項</h2>
+                </div>
+              </div>
+              <div class="overview-priority" id="todayPriority"></div>
+            </div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">主管提醒</div>
-          <h2 class="section-title">主管提醒</h2>
-          <div class="section-desc">已發布給業務、等待正式業務回報或 Boss 確認的提醒。</div>
-        </div>
-      </div>
-      <div class="panel" id="supervisorReminderBoard"></div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">經營警示</div>
+                  <h2 class="section-title">經營警示</h2>
+                  <div class="section-desc">根據銷貨毛利與客戶狀態產生的管理提醒；這是系統警示，不是已建立的待辦。</div>
+                </div>
+              </div>
+              <div class="panel" id="salesSummary"></div>
+            </div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">訊號雷達</div>
-          <h2 class="section-title">訊號雷達</h2>
-          <div class="section-desc">有事情發生，但不一定要處理；需要盯的訊號可加入短追蹤。</div>
-        </div>
-      </div>
-      <div class="panel" id="quickTagSummary"></div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">待補 / 待指定</div>
+                  <h2 class="section-title">待補回報 / 待指定客戶</h2>
+                </div>
+              </div>
+              <div class="split">
+                <div class="panel">
+                  <h3 class="section-title">待補回報</h3>
+                  <div id="pendingDrafts"></div>
+                </div>
+                <div class="panel">
+                  <h3 class="section-title">待指定客戶</h3>
+                  <div id="unmatchedDrafts"></div>
+                </div>
+              </div>
+            </div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">客戶案件</div>
-          <h2 class="section-title">客戶案件</h2>
-          <div class="section-desc">需要連續追蹤、有負責人、有狀態與結果的事項。</div>
-        </div>
-      </div>
-      <div class="panel" id="customerCaseBoard"></div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">業務分區</div>
+                  <h2 class="section-title">業務分區狀況</h2>
+                </div>
+              </div>
+              <div class="sector-grid" id="ownerSummary"></div>
+            </div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">經營警示</div>
-          <h2 class="section-title">經營警示</h2>
-          <div class="section-desc">根據銷貨毛利與客戶狀態產生的管理提醒；這是系統警示，不是已建立的待辦。</div>
-        </div>
-      </div>
-      <div class="panel" id="salesSummary"></div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">客戶狀態</div>
+                  <h2 class="section-title">客戶狀態摘要</h2>
+                </div>
+              </div>
+              <div class="panel" id="customerStatusSummary"></div>
+            </div>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">待處理異常</div>
-          <h2 class="section-title">待處理異常</h2>
-        </div>
-      </div>
-      <div class="split">
-        <div class="panel">
-          <h3 class="section-title">待補回報</h3>
-          <div id="pendingDrafts"></div>
-        </div>
-        <div class="panel">
-          <h3 class="section-title">待指定客戶</h3>
-          <div id="unmatchedDrafts"></div>
-        </div>
-      </div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">系統資料狀態</div>
+                  <h2 class="section-title">系統資料狀態 / 資料完整度</h2>
+                </div>
+              </div>
+              <div class="system-data" id="systemDataStatus"></div>
+            </div>
+          </section>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">業務分區</div>
-          <h2 class="section-title">業務分區狀況</h2>
-        </div>
-      </div>
-      <div class="sector-grid" id="ownerSummary"></div>
+          <section class="workspace-panel" id="workspace-reports" data-workspace-panel="reports">
+            <div class="workspace-hero">
+              <div class="section-kicker">回報訊號</div>
+              <h2 class="workspace-title">現場回報與訊號雷達</h2>
+              <div class="workspace-desc">查看近兩日正式業務回報，或聚焦機會、異常、客戶變化。這裡是訊號，不是待辦。</div>
+            </div>
+            <div class="workspace-tools" id="reportWorkspaceTabs">
+              <button class="workspace-chip active" data-report-view="recent">近兩日回報</button>
+              <button class="workspace-chip" data-report-view="signals" data-signal-filter="all">全部訊號</button>
+              <button class="workspace-chip" data-report-view="signals" data-signal-filter="opportunity">機會</button>
+              <button class="workspace-chip" data-report-view="signals" data-signal-filter="abnormal">異常</button>
+              <button class="workspace-chip" data-report-view="signals" data-signal-filter="customerChange">客戶變化</button>
+            </div>
+            <div class="workspace-subview" id="reportRecentView">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">現場回報</div>
+                  <h2 class="section-title">近兩日現場回報</h2>
+                  <div class="section-desc">最近 48 小時業務原始回報流水。</div>
+                </div>
+              </div>
+              <div class="panel" id="todayReports"></div>
+            </div>
+            <div class="workspace-subview" id="reportSignalView" style="display:none">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">訊號雷達</div>
+                  <h2 class="section-title">訊號雷達</h2>
+                  <div class="section-desc">有事情發生，但不一定要處理；需要盯的訊號可加入追蹤提醒。</div>
+                </div>
+              </div>
+              <div class="panel" id="quickTagSummary"></div>
+            </div>
+          </section>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">現場回報</div>
-          <h2 class="section-title">近兩日現場回報</h2>
-          <div class="section-desc">最近 48 小時業務原始回報流水。</div>
-        </div>
-      </div>
-      <div class="panel" id="todayReports"></div>
+          <section class="workspace-panel" id="workspace-tracking" data-workspace-panel="tracking">
+            <div class="workspace-hero">
+              <div class="section-kicker">追蹤提醒</div>
+              <h2 class="workspace-title">Boss 已決定要追的事</h2>
+              <div class="workspace-desc">未發布主管提醒代表 Boss 自己先追；已發布主管提醒代表正式交辦業務處理。</div>
+            </div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">追蹤提醒</div>
+                  <h2 class="section-title">追蹤提醒</h2>
+                </div>
+              </div>
+              <div class="panel" id="followupBoard"></div>
+            </div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">主管提醒</div>
+                  <h2 class="section-title">主管提醒</h2>
+                  <div class="section-desc">已發布給業務、等待正式業務回報或 Boss 確認的提醒。</div>
+                </div>
+              </div>
+              <div class="panel" id="supervisorReminderBoard"></div>
+            </div>
+          </section>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">客戶回報歷史</div>
-          <h2 class="section-title">客戶回報歷史查詢</h2>
-        </div>
-      </div>
-      <div class="search-box">
-        <input class="search-input" id="reportHistorySearch" placeholder="輸入客戶名稱或客戶編號">
-        <div class="actions">
-          <button class="action action-secondary" id="reportHistorySearchBtn">查詢</button>
-        </div>
-        <div class="history-results" id="reportHistoryResults"></div>
-      </div>
+          <section class="workspace-panel" id="workspace-cases" data-workspace-panel="cases">
+            <div class="workspace-hero">
+              <div class="section-kicker">客戶案件</div>
+              <h2 class="workspace-title">正式案件管理</h2>
+              <div class="workspace-desc">管理已升級成正式案件的客戶事件；這裡不是一般回報，也不是隨手追一下的提醒。</div>
+            </div>
+            <div class="panel" id="customerCaseBoard"></div>
+          </section>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">客戶狀態</div>
-          <h2 class="section-title">客戶狀態摘要</h2>
-        </div>
-      </div>
-      <div class="panel" id="customerStatusSummary"></div>
+          <section class="workspace-panel" id="workspace-search" data-workspace-panel="search">
+            <div class="workspace-hero">
+              <div class="section-kicker">客戶查詢</div>
+              <h2 class="workspace-title">查單一客戶完整脈絡</h2>
+              <div class="workspace-desc">搜尋客戶基本資料、近期回報、Boss 追蹤、主管提醒、案件與歷史紀錄。</div>
+            </div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">客戶快速搜尋</div>
+                  <h2 class="section-title">客戶快速搜尋</h2>
+                </div>
+              </div>
+              <div class="search-box">
+                <input class="search-input" id="customerSearch" placeholder="搜尋客戶名稱、電話、地址">
+                <div class="search-results" id="searchResults"></div>
+                <div id="customerDetail"></div>
+              </div>
+            </div>
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">客戶回報歷史</div>
+                  <h2 class="section-title">客戶回報歷史查詢</h2>
+                </div>
+              </div>
+              <div class="search-box">
+                <input class="search-input" id="reportHistorySearch" placeholder="輸入客戶名稱或客戶編號">
+                <div class="actions">
+                  <button class="action action-secondary" id="reportHistorySearchBtn">查詢</button>
+                </div>
+                <div class="history-results" id="reportHistoryResults"></div>
+              </div>
+            </div>
+          </section>
 
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">系統資料狀態</div>
-          <h2 class="section-title">系統資料狀態 / 資料完整度</h2>
+          <div class="panel drilldown boss-drilldown-panel" id="bossDrilldownPanel" data-drilldown-panel="true"></div>
         </div>
-      </div>
-      <div class="system-data" id="systemDataStatus"></div>
-
-      <div class="section-head section">
-        <div>
-          <div class="section-kicker">客戶快速搜尋</div>
-          <h2 class="section-title">客戶快速搜尋</h2>
-        </div>
-      </div>
-      <div class="search-box">
-        <input class="search-input" id="customerSearch" placeholder="搜尋客戶名稱、電話、地址">
-        <div class="search-results" id="searchResults"></div>
-        <div id="customerDetail"></div>
       </div>
     </section>
   </main>
@@ -685,6 +857,10 @@
     let reportExpanded=false;
     let actionSignalsExpanded=false;
     let followupFilter='全部待辦';
+    let supervisorReminderFilter='allOpen';
+    let customerCaseFilter='allOpen';
+    let reportWorkspaceView='recent';
+    let activeWorkspace='overview';
     let activeQuickTagDetail=null;
     let activeReportThread=null;
     let pendingReplyDefaults=null;
@@ -697,6 +873,16 @@
       continueTracking:''
     };
 
+    Array.prototype.forEach.call(document.querySelectorAll('[data-workspace-target]'),function(btn){
+      btn.addEventListener('click',function(){
+        switchWorkspace(btn.getAttribute('data-workspace-target')||'overview');
+      });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-report-view]'),function(btn){
+      btn.addEventListener('click',function(){
+        setReportWorkspaceView(btn.getAttribute('data-report-view')||'recent',btn.getAttribute('data-signal-filter')||'all');
+      });
+    });
     document.getElementById('customerSearch').addEventListener('input',function(){
       ensureCustomersForSearch();
       renderCustomerSearch();
@@ -732,6 +918,115 @@
         console.log('boss dashboard error',err.message);
         setMessage('<div class="error">Boss 戰情資料載入失敗<br>'+escapeHtml(err.message)+'<br><button class="action action-secondary" style="margin-top:10px" onclick="loadDashboard(true)">重試</button></div>');
       });
+    }
+
+    function switchWorkspace(workspace,options){
+      options=options||{};
+      activeWorkspace=workspace||'overview';
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-workspace-target]'),function(btn){
+        btn.classList.toggle('active',btn.getAttribute('data-workspace-target')===activeWorkspace);
+      });
+      Array.prototype.forEach.call(document.querySelectorAll('[data-workspace-panel]'),function(panel){
+        panel.classList.toggle('active',panel.getAttribute('data-workspace-panel')===activeWorkspace);
+      });
+
+      if(activeWorkspace==='reports'){
+        setReportWorkspaceView(options.reportView||reportWorkspaceView||'recent',options.signalFilter||'all',true);
+      }
+
+      if(activeWorkspace==='tracking' && dashboardData){
+        renderFollowupBoard(dashboardData.followupBoard||{});
+        renderSupervisorReminderBoard(dashboardData.supervisorReminderSummary||{});
+      }
+
+      if(activeWorkspace==='cases' && dashboardData){
+        renderCustomerCaseBoard(dashboardData.customerCaseSummary||{});
+      }
+
+      if(options.scroll!==false){
+        const panel=document.querySelector('[data-workspace-panel="'+activeWorkspace+'"]');
+        panel&&panel.scrollIntoView({behavior:'smooth',block:'start'});
+      }
+    }
+
+    function setReportWorkspaceView(view,signalFilter,skipSwitch){
+      reportWorkspaceView=view||'recent';
+      signalFilter=signalFilter||'all';
+
+      if(!skipSwitch && activeWorkspace!=='reports'){
+        switchWorkspace('reports',{reportView:reportWorkspaceView,signalFilter:signalFilter,scroll:false});
+      }
+
+      const recent=document.getElementById('reportRecentView');
+      const signals=document.getElementById('reportSignalView');
+      if(recent){
+        recent.style.display=reportWorkspaceView==='recent'?'block':'none';
+      }
+      if(signals){
+        signals.style.display=reportWorkspaceView==='signals'?'block':'none';
+      }
+
+      Array.prototype.forEach.call(document.querySelectorAll('[data-report-view]'),function(btn){
+        const sameView=btn.getAttribute('data-report-view')===reportWorkspaceView;
+        const sameFilter=reportWorkspaceView==='recent' || (btn.getAttribute('data-signal-filter')||'all')===signalFilter;
+        btn.classList.toggle('active',sameView&&sameFilter);
+      });
+
+      if(reportWorkspaceView==='signals' && signalFilter!=='all'){
+        openBossDrilldown('signals',signalFilter);
+      }else if(reportWorkspaceView==='signals'){
+        closeBossDrilldown();
+      }else if(reportWorkspaceView==='recent'){
+        closeBossDrilldown();
+      }
+    }
+
+    function handleMetricClick(type,filter){
+      type=String(type||'');
+      filter=String(filter||'');
+
+      if(type==='reports' || type==='report' || type==='todayReports'){
+        if(filter==='pendingDrafts' || filter==='pendingAssignedCustomers' || filter==='pendingCustomers'){
+          switchWorkspace('overview');
+          return;
+        }
+        switchWorkspace('reports',{reportView:'recent'});
+        return;
+      }
+
+      if(type==='signals' || type==='actionSignals' || type==='quickTags'){
+        switchWorkspace('reports',{reportView:'signals',signalFilter:filter||'all'});
+        return;
+      }
+
+      if(type==='followups' || type==='shortFollowup' || type==='needFollowup'){
+        followupFilter=mapFollowupFilter(filter);
+        switchWorkspace('tracking');
+        return;
+      }
+
+      if(type==='reminders' || type==='supervisorReminders'){
+        supervisorReminderFilter=mapReminderFilter(filter);
+        switchWorkspace('tracking');
+        return;
+      }
+
+      if(type==='cases' || type==='customerCases'){
+        customerCaseFilter=mapCaseFilter(filter);
+        switchWorkspace('cases');
+        return;
+      }
+
+      if(type==='all'){
+        followupFilter=mapFollowupFilter(filter);
+        supervisorReminderFilter=mapReminderFilter(filter);
+        customerCaseFilter=mapCaseFilter(filter);
+        switchWorkspace('tracking');
+        return;
+      }
+
+      switchWorkspace('overview');
     }
 
     function setupModalInteractions(){
@@ -1003,10 +1298,10 @@
     function renderDashboard(data){
       document.getElementById('dashboard').style.display='block';
       setMessage('');
-      document.getElementById('generatedAt').textContent=data.generatedAt||'';
+      document.getElementById('generatedAt').textContent=formatDateTimeDisplay(data.generatedAt)||data.generatedAt||'';
       renderMetrics(data.operationSummary||{});
+      renderTodayPriority(data);
       renderSystemDataStatus(data.operationSummary||{});
-      renderSignalFunnel(data);
       renderOwnerSummary(data.ownerSummary||[]);
       renderPendingDrafts(data.pendingDrafts||[]);
       renderUnmatchedDrafts(data.unmatchedDrafts||[]);
@@ -1018,6 +1313,40 @@
       renderQuickTagSummary(data.quickTagSummary||{});
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
+      switchWorkspace(activeWorkspace||'overview',{scroll:false});
+    }
+
+    function renderTodayPriority(data){
+      const target=document.getElementById('todayPriority');
+      if(!target){
+        return;
+      }
+
+      const op=(data&&data.operationSummary)||{};
+      const follow=(data&&data.followupBoard)||{};
+      const reminders=(data&&data.supervisorReminderSummary)||{};
+      const cases=(data&&data.customerCaseSummary)||{};
+      const items=[
+        {label:'逾期',value:num(op.overdueCount||follow.overdueCount||0),tone:'danger',workspace:'tracking',type:'all',filter:'overdue'},
+        {label:'今日到期',value:num(op.dueTodayCount||follow.dueTodayCount||0),tone:'warn',workspace:'tracking',type:'all',filter:'dueToday'},
+        {label:'待 Boss 確認',value:num(reminders.pendingBossConfirmCount||0),tone:'warn',workspace:'tracking',type:'reminders',filter:'pendingBossConfirm'},
+        {label:'客戶案件',value:num(cases.totalCount||op.customerCaseCount||0),tone:'',workspace:'cases',type:'cases',filter:'allOpen'},
+        {label:'待補回報',value:num(op.pendingDraftCount||0),tone:'',workspace:'overview',type:'reports',filter:'pendingDrafts'},
+        {label:'待指定客戶',value:num(op.unmatchedDraftCount||0),tone:'warn',workspace:'overview',type:'reports',filter:'pendingAssignedCustomers'}
+      ];
+
+      target.innerHTML=items.map(function(item){
+        return '<button class="priority-card '+escapeAttr(item.tone||'')+'" data-priority-type="'+escapeAttr(item.type)+'" data-priority-filter="'+escapeAttr(item.filter)+'">'+
+          '<strong>'+escapeHtml(formatMetricValue(item.value))+'</strong>'+
+          '<span>'+escapeHtml(item.label)+'</span>'+
+        '</button>';
+      }).join('');
+
+      Array.prototype.forEach.call(target.querySelectorAll('[data-priority-type]'),function(btn){
+        btn.addEventListener('click',function(){
+          handleMetricClick(btn.getAttribute('data-priority-type'),btn.getAttribute('data-priority-filter'));
+        });
+      });
     }
 
     function loadSalesSummary(forceRefresh){
@@ -1053,10 +1382,10 @@
         {label:'待補回報',value:toMetricNumber(summary.pendingDraftCount),note:'需要業務補內容',type:'reports',filter:'pendingDrafts',warning:toMetricNumber(summary.pendingDraftCount)>0},
         {label:'待指定客戶',value:toMetricNumber(summary.unmatchedDraftCount),note:'需管理端處理',type:'reports',filter:'pendingAssignedCustomers',warning:toMetricNumber(summary.unmatchedDraftCount)>0},
         {label:'訊號雷達',value:toMetricNumber(summary.signalRadarCount),note:'近30天機會 / 異常 / 變化',type:'signals',filter:'all'},
-        {label:'短追蹤',value:toMetricNumber(summary.shortFollowupCount),note:'未完成待追蹤',type:'followups',filter:'all'},
+        {label:'追蹤提醒',value:toMetricNumber(summary.shortFollowupCount),note:'未完成待追蹤',type:'followups',filter:'all'},
         {label:'主管提醒',value:toMetricNumber(summary.supervisorReminderCount),note:'已發布未完成',type:'reminders',filter:'allOpen'},
         {label:'客戶案件',value:toMetricNumber(summary.customerCaseCount),note:'未結案案件',type:'cases',filter:'allOpen'},
-        {label:'A級重要',value:toMetricNumber(summary.importantACount),note:'短追蹤 / 提醒 / 案件',type:'all',filter:'importantA',warning:toMetricNumber(summary.importantACount)>0},
+        {label:'A級重要',value:toMetricNumber(summary.importantACount),note:'追蹤提醒 / 案件',type:'all',filter:'importantA',warning:toMetricNumber(summary.importantACount)>0},
         {label:'今日到期',value:toMetricNumber(summary.dueTodayCount),note:'今日需確認',type:'all',filter:'dueToday',warning:toMetricNumber(summary.dueTodayCount)>0},
         {label:'逾期',value:toMetricNumber(summary.overdueCount),note:'已超過追蹤日',type:'all',filter:'overdue',warning:toMetricNumber(summary.overdueCount)>0}
       ];
@@ -1071,7 +1400,7 @@
 
       Array.prototype.forEach.call(document.querySelectorAll('[data-drill-type]'),function(card){
         card.addEventListener('click',function(){
-          openBossDrilldown(card.getAttribute('data-drill-type'),card.getAttribute('data-drill-filter'));
+          handleMetricClick(card.getAttribute('data-drill-type'),card.getAttribute('data-drill-filter'));
         });
       });
     }
@@ -1105,7 +1434,7 @@
         '</div>'+
         '<div class="funnel-flow">↓</div>'+
         '<div class="funnel-card followup clickable" onclick="openBossDrilldown(\'followups\',\'all\')">'+
-          '<div class="funnel-label">第二層｜短追蹤</div>'+
+          '<div class="funnel-label">第二層｜追蹤提醒</div>'+
           '<div class="funnel-value">'+num(activeFollowups)+' 筆</div>'+
           '<div class="funnel-meta">逾期 '+num(followup.overdueCount||0)+'｜今日到期 '+num(followup.dueTodayCount||0)+'｜需追蹤 '+num(followup.trackingCount||0)+'</div>'+
         '</div>'+
@@ -1174,7 +1503,7 @@
         return '<div class="list-card">'+
           '<div class="card-name">'+escapeHtml(row.customerName||'未指定客戶')+'</div>'+
           '<div class="card-meta"><b>Sector</b> '+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
-          '<b>建立時間</b> '+escapeHtml(row.createdAt||'')+'<br>'+
+          '<b>建立時間</b> '+escapeHtml(formatDateTimeDisplay(row.createdAt))+'<br>'+
           '<b>GPS 精準度</b> 約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
           '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
         '</div>';
@@ -1188,7 +1517,7 @@
           '<div class="card-name">'+escapeHtml(row.customerName||'找不到顧客')+'</div>'+
           '<div class="alert-caption">快速回報找不到對應客戶</div>'+
           '<div class="card-meta"><b>Sector</b> '+escapeHtml(row.mode||'')+' / '+escapeHtml(row.salesName||'')+'<br>'+
-          '<b>建立時間</b> '+escapeHtml(row.createdAt||'')+'<br>'+
+          '<b>建立時間</b> '+escapeHtml(formatDateTimeDisplay(row.createdAt))+'<br>'+
           '<b>GPS 精準度</b> 約 '+escapeHtml(formatAccuracy(row.accuracy))+'<br>'+
           '<b>備註</b> '+escapeHtml(row.note||'無')+'</div>'+
           '<div class="actions">'+
@@ -1234,14 +1563,14 @@
             '<strong>'+num(item.value)+'</strong>'+
           '</div>';
         }).join('')+'</div>'+
-        '<div class="report-meta">短追蹤適合 1～14 天內可確認的小事項；需要連續追蹤的事項，下一版可升級為客戶案件。</div>'+
-        '<div class="report-meta">目前短追蹤 '+num(activeCount)+' 筆｜依緊急度排序</div>'+
+        '<div class="report-meta">追蹤提醒適合 1～14 天內可確認的小事項；需要連續追蹤的事項可升級為客戶案件。</div>'+
+        '<div class="report-meta">目前追蹤提醒 '+num(activeCount)+' 筆｜依緊急度排序</div>'+
         '<div class="followup-filter">'+filters.map(function(label){
           return '<button class="filter-btn '+(followupFilter===label?'active':'')+'" data-followup-filter="'+escapeAttr(label)+'">'+escapeHtml(label)+'</button>';
         }).join('')+'</div>'+
         (filtered.length
           ? '<div class="followup-list">'+filtered.map(renderFollowupCard).join('')+'</div>'
-          : '<div class="empty">'+(followupFilter==='全部待辦'?'目前沒有短追蹤事項。':'此篩選目前沒有資料。')+'</div>');
+          : '<div class="empty">'+(followupFilter==='全部待辦'?'目前沒有追蹤提醒事項。':'此篩選目前沒有資料。')+'</div>');
 
       Array.prototype.forEach.call(target.querySelectorAll('[data-followup-filter]'),function(btn){
         btn.addEventListener('click',function(){
@@ -1286,13 +1615,13 @@
         '</div>'+
         '<div class="followup-meta">'+
           '客戶編號 '+escapeHtml(row.customerCode||'無')+'｜業務 '+escapeHtml(row.owner||'未指定')+'｜分數 '+num(row.urgencyScore)+'<br>'+
-          '原始回報 '+escapeHtml(row.reportTime||'無')+'｜最近回覆 '+escapeHtml(row.latestReplyTime||'無')+
+          '原始回報 '+escapeHtml(formatDateTimeDisplay(row.reportTime)||'無')+'｜最近回覆 '+escapeHtml(formatDateTimeDisplay(row.latestReplyTime)||'無')+
         '</div>'+
         '<div class="reply-state">'+
           '<span class="reply-chip '+(row.hasBossReply?'done':'')+'">'+escapeHtml(row.hasBossReply?'已有回覆':'尚無回覆')+'</span>'+
           '<span class="reply-chip">'+escapeHtml(status||'未處理')+'</span>'+
           (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
-          (row.nextFollowDate?'<span class="reply-chip '+(row.isOverdue?'hot':'')+'">追蹤 '+escapeHtml(row.nextFollowDate)+'</span>':'')+
+          (row.nextFollowDate?'<span class="reply-chip '+(row.isOverdue?'hot':'')+'">追蹤 '+escapeHtml(formatDateOnlyDisplay(row.nextFollowDate))+'</span>':'')+
         '</div>'+
         '<div class="followup-copy"><b>原始回報</b> '+escapeHtml(reportText)+'</div>'+
         '<div class="followup-copy"><b>最新回覆</b> '+escapeHtml(replyText)+'</div>'+
@@ -1308,24 +1637,40 @@
       const target=document.getElementById('supervisorReminderBoard');
       summary=summary||{};
       const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const filtered=filterReminderRows(rows,supervisorReminderFilter);
       const stats=[
         {label:'未完成',value:summary.totalCount||0,filter:'allOpen'},
         {label:'待處理',value:summary.pendingCount||0,filter:'pending'},
         {label:'待 Boss 確認',value:summary.pendingBossConfirmCount||0,filter:'pendingBossConfirm'},
-        {label:'逾期',value:summary.overdueCount||0,filter:'overdue'}
+        {label:'逾期',value:summary.overdueCount||0,filter:'overdue'},
+        {label:'今日到期',value:summary.dueTodayCount||0,filter:'dueToday'},
+        {label:'A級重要',value:summary.aLevelCount||0,filter:'importantA'}
+      ];
+      const filters=[
+        {label:'全部',filter:'allOpen'},
+        {label:'已發布主管提醒',filter:'pending'},
+        {label:'待 Boss 確認',filter:'pendingBossConfirm'},
+        {label:'今日到期',filter:'dueToday'},
+        {label:'逾期',filter:'overdue'},
+        {label:'A級重要',filter:'importantA'},
+        {label:'撤回',filter:'withdrawn'}
       ];
 
       target.innerHTML=
         '<div class="mini-summary">'+stats.map(function(item){
           return '<div class="mini-stat" data-reminder-filter="'+escapeAttr(item.filter)+'"><span>'+escapeHtml(item.label)+'</span><strong>'+num(item.value)+'</strong></div>';
         }).join('')+'</div>'+
-        (rows.length
-          ? '<div class="reminder-list">'+rows.slice(0,8).map(renderSupervisorReminderCard).join('')+'</div>'
-          : '<div class="empty">目前沒有未完成主管提醒。</div>');
+        '<div class="followup-filter">'+filters.map(function(item){
+          return '<button class="filter-btn '+(supervisorReminderFilter===item.filter?'active':'')+'" data-reminder-filter="'+escapeAttr(item.filter)+'">'+escapeHtml(item.label)+'</button>';
+        }).join('')+'</div>'+
+        (filtered.length
+          ? '<div class="reminder-list">'+filtered.slice(0,30).map(renderSupervisorReminderCard).join('')+'</div>'
+          : '<div class="empty">此篩選目前沒有主管提醒。</div>');
 
       Array.prototype.forEach.call(target.querySelectorAll('[data-reminder-filter]'),function(btn){
         btn.addEventListener('click',function(){
-          openBossDrilldown('reminders',btn.getAttribute('data-reminder-filter'));
+          supervisorReminderFilter=btn.getAttribute('data-reminder-filter')||'allOpen';
+          renderSupervisorReminderBoard((dashboardData&&dashboardData.supervisorReminderSummary)||{});
         });
       });
       bindReportThreadButtons(target);
@@ -1338,10 +1683,10 @@
 
       return '<div class="'+cls+'">'+
         '<div class="followup-title"><span>'+escapeHtml(row.supervisorTitle||'主管提醒')+'</span><span class="reply-chip">'+escapeHtml(row.supervisorStatus||'待處理')+'</span></div>'+
-        '<div class="followup-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜追蹤 '+escapeHtml(row.nextFollowUpDate||'未排程')+'</div>'+
+        '<div class="followup-meta">'+escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜追蹤 '+escapeHtml(formatDateOnlyDisplay(row.nextFollowUpDate)||'未排程')+'</div>'+
         '<div class="followup-copy">'+escapeHtml(trimText(row.supervisorContent||'',120))+'</div>'+
         '<div class="reply-state">'+
-          (row.salesHandledAt?'<span class="reply-chip done">業務已回報 '+escapeHtml(row.salesHandledAt)+'</span>':'<span class="reply-chip">等待正式回報</span>')+
+          (row.salesHandledAt?'<span class="reply-chip done">業務已回報 '+escapeHtml(formatDateTimeDisplay(row.salesHandledAt))+'</span>':'<span class="reply-chip">等待正式回報</span>')+
           (row.linkedReportId?'<span class="reply-chip done">已關聯回報</span>':'')+
         '</div>'+
         (row.salesProcessSummary?'<div class="followup-copy"><b>業務處理摘要</b> '+escapeHtml(row.salesProcessSummary)+'</div>':'')+
@@ -1359,24 +1704,43 @@
       const target=document.getElementById('customerCaseBoard');
       summary=summary||{};
       const rows=Array.isArray(summary.rows)?summary.rows:[];
+      const filtered=filterCaseRows(rows,customerCaseFilter).sort(compareCustomerCasesForWorkbench);
       const stats=[
         {label:'未結案',value:summary.totalCount||0,filter:'allOpen'},
         {label:'A級案件',value:summary.aLevelCount||0,filter:'importantA'},
         {label:'今日到期',value:summary.dueTodayCount||0,filter:'dueToday'},
         {label:'逾期',value:summary.overdueCount||0,filter:'overdue'}
       ];
+      const filters=[
+        {label:'全部',filter:'allOpen'},
+        {label:'高優先',filter:'highPriority'},
+        {label:'新案件',filter:'新案件'},
+        {label:'洽談中',filter:'洽談中'},
+        {label:'等待客戶',filter:'等待客戶'},
+        {label:'等待廠商',filter:'等待廠商'},
+        {label:'已報價',filter:'已報價'},
+        {label:'今日到期',filter:'dueToday'},
+        {label:'逾期',filter:'overdue'},
+        {label:'A級重要',filter:'importantA'},
+        {label:'暫緩',filter:'暫緩'},
+        {label:'已結案',filter:'closed'}
+      ];
 
       target.innerHTML=
         '<div class="mini-summary">'+stats.map(function(item){
           return '<div class="mini-stat" data-case-filter="'+escapeAttr(item.filter)+'"><span>'+escapeHtml(item.label)+'</span><strong>'+num(item.value)+'</strong></div>';
         }).join('')+'</div>'+
-        (rows.length
-          ? '<div class="case-list">'+rows.slice(0,10).map(renderCustomerCaseCard).join('')+'</div>'
-          : '<div class="empty">目前沒有未結案客戶案件。</div>');
+        '<div class="followup-filter">'+filters.map(function(item){
+          return '<button class="filter-btn '+(customerCaseFilter===item.filter?'active':'')+'" data-case-filter="'+escapeAttr(item.filter)+'">'+escapeHtml(item.label)+'</button>';
+        }).join('')+'</div>'+
+        (filtered.length
+          ? '<div class="case-list">'+filtered.slice(0,50).map(renderCustomerCaseCard).join('')+'</div>'
+          : '<div class="empty">此篩選目前沒有客戶案件。</div>');
 
       Array.prototype.forEach.call(target.querySelectorAll('[data-case-filter]'),function(btn){
         btn.addEventListener('click',function(){
-          openBossDrilldown('cases',btn.getAttribute('data-case-filter'));
+          customerCaseFilter=btn.getAttribute('data-case-filter')||'allOpen';
+          renderCustomerCaseBoard((dashboardData&&dashboardData.customerCaseSummary)||{});
         });
       });
       bindCaseButtons(target);
@@ -1384,17 +1748,20 @@
 
     function renderCustomerCaseCard(row){
       const cls=row.isOverdue?'case-card overdue':(row.importance==='A'?'case-card important':'case-card');
+      const priorityScore=calculateCasePriorityScore(row);
+      const priorityLabel=priorityScore>=70?'高':(priorityScore>=40?'中':'低');
 
       return '<div class="'+cls+'">'+
         '<div class="followup-title"><span>'+escapeHtml(row.title||'未命名案件')+'</span><span class="reply-chip '+(row.importance==='A'?'hot':'')+'">重要 '+escapeHtml(row.importance||'B')+'</span></div>'+
         '<div class="followup-meta">'+
           escapeHtml(row.customerName||'未命名客戶')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.caseType||'其他')+'｜價值 '+escapeHtml(row.caseValue||'中')+'｜'+escapeHtml(row.impactType||'其他')+'｜'+escapeHtml(row.status||'新案件')+'<br>'+
-          '下次追蹤 '+escapeHtml(row.nextFollowDate||'未排程')+'｜建立 '+escapeHtml(row.createdAt||'')+'｜更新 '+escapeHtml(row.updatedAt||'')+
+          '下次追蹤 '+escapeHtml(formatDateOnlyDisplay(row.nextFollowDate)||'未排程')+'｜建立 '+escapeHtml(formatDateTimeDisplay(row.createdAt))+'｜更新 '+escapeHtml(formatDateTimeDisplay(row.updatedAt))+
         '</div>'+
         '<div class="followup-copy">'+escapeHtml(trimText(row.content||'',130))+'</div>'+
         '<div class="reply-state">'+
           '<span class="reply-chip">案件價值 '+escapeHtml(row.caseValue||'中')+'</span>'+
           '<span class="reply-chip">影響 '+escapeHtml(row.impactType||'其他')+'</span>'+
+          '<span class="reply-chip">優先 '+escapeHtml(priorityLabel)+' / '+escapeHtml(priorityScore)+'</span>'+
           '<span class="reply-chip '+(row.isOverdue?'hot':'')+'">'+escapeHtml(row.dueBucket||'未排程')+'</span>'+
         '</div>'+
         '<div class="actions">'+
@@ -1488,7 +1855,7 @@
           const hasData=(Number(item.count||0)>0);
           return '<button class="quick-tag-button '+(hasData?'has-data':'')+'" data-quick-group="'+escapeAttr(group.key||'')+'" data-quick-tag="'+escapeAttr(item.tag||'')+'">'+
             '<span class="quick-tag-name"><span>'+escapeHtml(item.tag||'未命名標籤')+'</span><strong>'+num(item.count||0)+'</strong></span>'+
-            '<span class="quick-tag-meta">最近30天 '+num(item.count||0)+' 筆 / '+num(item.customerCount||0)+' 家客戶'+(item.latestReportTime?'｜最近 '+escapeHtml(item.latestReportTime):'')+'</span>'+
+            '<span class="quick-tag-meta">最近30天 '+num(item.count||0)+' 筆 / '+num(item.customerCount||0)+' 家客戶'+(item.latestReportTime?'｜最近 '+escapeHtml(formatDateTimeDisplay(item.latestReportTime)):'')+'</span>'+
           '</button>';
         }).join('')+
       '</div>';
@@ -1496,7 +1863,7 @@
 
     function renderQuickTagDetail(){
       if(!activeQuickTagDetail){
-        return '<div class="empty">點擊上方訊號，會在明細檢視載入相關回報；需要盯一下的項目可加入短追蹤。</div>';
+        return '<div class="empty">點擊上方訊號，會在明細檢視載入相關回報；需要盯一下的項目可加入追蹤提醒。</div>';
       }
 
       const summary=(dashboardData&&dashboardData.quickTagSummary)||{};
@@ -1536,12 +1903,12 @@
           '<span>'+escapeHtml(row.customerName||'未命名客戶')+'</span>'+
           '<span class="report-type">'+escapeHtml(row.contactType||row.reportType||'回報')+'</span>'+
         '</div>'+
-        '<div class="report-meta">'+escapeHtml(row.timestamp||row.reportTime||'')+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
+        '<div class="report-meta">'+escapeHtml(formatDateTimeDisplay(row.timestamp||row.reportTime))+'｜'+escapeHtml(row.owner||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
         '<div class="report-content">'+escapeHtml(trimText(row.content||row.note||'無回報內容',130))+'</div>'+
         renderReportTagRows(row)+
         '<div class="actions">'+
           '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 處理</button>'+
-          '<button class="action action-secondary" data-signal-followup="'+escapeAttr(row.reportId||'')+'">加入短追蹤</button>'+
+          '<button class="action action-secondary" data-signal-followup="'+escapeAttr(row.reportId||'')+'">加入追蹤提醒</button>'+
           '<button class="action action-secondary" data-case-signal="'+escapeAttr(row.reportId||'')+'">升級案件</button>'+
         '</div>'+
       '</div>';
@@ -1586,7 +1953,7 @@
             '<div class="report-count">'+num(summary.totalCount)+'</div>'+
             '<div>'+
               '<div class="card-name">'+escapeHtml(summary.rangeLabel||'近48小時回報')+'</div>'+
-              '<div class="report-window">'+escapeHtml(summary.startTime||'')+' → '+escapeHtml(summary.endTime||'')+'</div>'+
+              '<div class="report-window">'+escapeHtml(formatDateTimeDisplay(summary.startTime))+' → '+escapeHtml(formatDateTimeDisplay(summary.endTime))+'</div>'+
             '</div>'+
           '</div>'+
           renderOwnerReportCounts(byOwner)+
@@ -1595,6 +1962,8 @@
             : '<div class="empty">近兩日尚無業務回報。</div>');
 
         bindReportThreadButtons(target);
+        bindSignalFollowupButtons(target);
+        bindCaseButtons(target);
       }catch(err){
         console.log('boss recent report detail render error',err.message);
         target.innerHTML='<div class="error">業務回報追蹤渲染失敗：'+escapeHtml(err.message)+'</div>';
@@ -1662,7 +2031,7 @@
         '<span class="reply-chip '+(hasReply?'done':'')+'">'+escapeHtml(hasReply?'已有回覆':'尚無回覆')+'</span>'+
         (processStatus?'<span class="reply-chip">'+escapeHtml(processStatus)+'</span>':'')+
         (importance?'<span class="reply-chip '+(importance==='A'?'hot':'')+'">重要 '+escapeHtml(importance)+'</span>':'')+
-        (hasReply?'<span class="reply-chip">最近回覆 '+escapeHtml(row.latestBossReplyTime||'')+'</span>':'')+
+        (hasReply?'<span class="reply-chip">最近回覆 '+escapeHtml(formatDateTimeDisplay(row.latestBossReplyTime))+'</span>':'')+
       '</div>';
 
       return '<div class="'+cardClass.trim()+'">'+
@@ -1670,13 +2039,16 @@
           '<span>'+escapeHtml(row.customerName||'未命名客戶')+'</span>'+
           '<span class="report-type">'+escapeHtml(row.reportType||row.status||'回報')+'</span>'+
         '</div>'+
-        '<div class="report-meta">'+escapeHtml(row.timestamp||row.date||'')+'｜'+escapeHtml(row.owner||'未指定')+'</div>'+
+        '<div class="report-meta">'+escapeHtml(formatDateTimeDisplay(row.timestamp||row.date))+'｜'+escapeHtml(row.owner||'未指定')+'</div>'+
         '<div class="report-content">'+escapeHtml(row.content||row.note||'無回報內容')+'</div>'+
         renderReportTagRows(row)+
         (row.status?'<div class="report-meta">狀態：'+escapeHtml(row.status)+'</div>':'')+
         replyState+
         '<div class="actions">'+
           '<button class="action action-secondary" data-report-thread="'+escapeAttr(row.reportId||'')+'">查看 / 處理</button>'+
+          '<button class="action action-secondary" onclick="queryHistoryForCustomer(\''+escapeAttr(row.customerName||row.customerCode||'')+'\')">查客戶歷史</button>'+
+          '<button class="action action-secondary" data-signal-followup="'+escapeAttr(row.reportId||'')+'">建立追蹤提醒</button>'+
+          '<button class="action action-secondary" data-case-signal="'+escapeAttr(row.reportId||'')+'">升級案件</button>'+
           (mapsUrl?'<a class="action action-secondary" target="_blank" rel="noopener" href="'+escapeAttr(mapsUrl)+'">查看位置</a>':'')+
         '</div>'+
       '</div>';
@@ -1697,7 +2069,7 @@
             status:'需追蹤',
             importance:'B',
             nextFollowUpDate:getTomorrowInputDate(),
-            message:'已帶入短追蹤預設值，請補上追蹤重點後儲存。'
+            message:'已帶入追蹤提醒預設值，請補上追蹤重點後儲存。'
           });
         });
       });
@@ -1747,7 +2119,7 @@
         }
 
         target.innerHTML=
-          '<div class="sales-updated">銷貨分析更新：'+escapeHtml(summary.updatedAt||'尚未讀取到銷貨分析摘要')+'</div>'+
+          '<div class="sales-updated">銷貨分析更新：'+escapeHtml(formatDateTimeDisplay(summary.updatedAt)||'尚未讀取到銷貨分析摘要')+'</div>'+
           '<div class="sales-summary">'+
             '<div class="analysis-panel">'+
               '<h3 class="analysis-title">經營警示</h3>'+
@@ -1811,7 +2183,7 @@
           '<div class="signal-numbers">'+
             '<span>總毛利 '+formatMoney(row.totalGrossProfit)+'</span>'+
             '<span>近90天 '+formatMoney(row.grossProfit90d)+'</span>'+
-            '<span>最後交易 '+escapeHtml(row.lastTradeDate||'無')+'</span>'+
+            '<span>最後交易 '+escapeHtml(formatDateOnlyDisplay(row.lastTradeDate)||'無')+'</span>'+
           '</div>'+
         '</div>';
       }).join('')+toggle+'</div>';
@@ -2082,6 +2454,52 @@
       return isNaN(date.getTime())?0:date.getTime();
     }
 
+    function parseDisplayDate(value){
+      if(!value){
+        return null;
+      }
+      if(value instanceof Date && !isNaN(value.getTime())){
+        return value;
+      }
+
+      const text=String(value).trim();
+      if(!text){
+        return null;
+      }
+
+      const nativeDate=new Date(text);
+      if(!isNaN(nativeDate.getTime())){
+        return nativeDate;
+      }
+
+      const match=text.match(/(\d{4})[\/\-年](\d{1,2})[\/\-月](\d{1,2})(?:[日\sT]+(\d{1,2}):(\d{1,2}))?/);
+      if(match){
+        const d=new Date(Number(match[1]),Number(match[2])-1,Number(match[3]),Number(match[4]||0),Number(match[5]||0));
+        return isNaN(d.getTime())?null:d;
+      }
+
+      return null;
+    }
+
+    function formatDateOnlyDisplay(value){
+      const date=parseDisplayDate(value);
+      if(!date){
+        return String(value||'');
+      }
+
+      return date.getFullYear()+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getDate()).padStart(2,'0');
+    }
+
+    function formatDateTimeDisplay(value){
+      const date=parseDisplayDate(value);
+      if(!date){
+        return String(value||'');
+      }
+
+      return date.getFullYear()+'/'+String(date.getMonth()+1).padStart(2,'0')+'/'+String(date.getDate()).padStart(2,'0')+
+        ' '+String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+    }
+
     function trimText(value,max){
       const text=String(value||'').trim();
       return text.length>max ? text.slice(0,max)+'...' : text;
@@ -2117,7 +2535,7 @@
         return '<div class="analysis-item">'+
           '<span class="analysis-tag">'+escapeHtml(row.alertType||'警示')+'</span>'+
           '<strong>'+escapeHtml(row.customerName||'未命名客戶')+'</strong>｜'+escapeHtml(row.customerStatus||'未分類')+'<br>'+
-          '近90天毛利 '+formatMoney(row.grossProfit90d)+'｜最後交易 '+escapeHtml(row.lastTradeDate||'無')+'<br>'+
+          '近90天毛利 '+formatMoney(row.grossProfit90d)+'｜最後交易 '+escapeHtml(formatDateOnlyDisplay(row.lastTradeDate)||'無')+'<br>'+
           '<span class="muted">'+escapeHtml(row.reason||'無建議理由')+'</span>'+
         '</div>';
       }).join('')+'</div>';
@@ -2606,7 +3024,7 @@
       target.innerHTML=
         '<div class="drilldown-head">'+
           '<div><div class="drilldown-title">明細檢視｜'+escapeHtml(detail.title||getDrilldownTitle(type,filter))+'</div>'+
-          '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel||filter||'全部')+'｜筆數 '+num(total)+'｜最後更新 '+escapeHtml(detail.generatedAt||data.generatedAt||'')+'</div></div>'+
+          '<div class="drilldown-meta">篩選條件：'+escapeHtml(detail.filterLabel||filter||'全部')+'｜筆數 '+num(total)+'｜最後更新 '+escapeHtml(formatDateTimeDisplay(detail.generatedAt||data.generatedAt))+'</div></div>'+
           '<button class="action action-secondary" onclick="closeBossDrilldown()">關閉明細</button>'+
         '</div>'+
         (detail.message?'<div class="empty">'+escapeHtml(detail.message)+'</div>':'')+
@@ -2733,7 +3151,7 @@
       const normalizedFilter=String(filter||'');
 
       if(['cases','customerCases'].indexOf(normalizedType)!==-1) return '客戶案件';
-      if(['followups','shortFollowup','needFollowup'].indexOf(normalizedType)!==-1) return '短追蹤';
+      if(['followups','shortFollowup','needFollowup'].indexOf(normalizedType)!==-1) return '追蹤提醒';
       if(['reminders','supervisorReminders'].indexOf(normalizedType)!==-1) return '主管提醒';
       if(['signals','actionSignals','quickTags'].indexOf(normalizedType)!==-1) return getSignalFilterLabel(filter);
       if((normalizedType==='reports' || normalizedType==='report' || normalizedType==='todayReports') && (normalizedFilter==='today' || normalizedType==='todayReports')) return '今日回報';
@@ -2758,7 +3176,7 @@
         return {kind:'signal',title:'訊號雷達',filterLabel:getSignalFilterLabel(filter),rows:filterSignalRows(collectSignalRows(),filter)};
       }
       if(type==='followups'){
-        return {kind:'followup',title:'短追蹤',filterLabel:getFollowupFilterLabel(filter),rows:filterFollowupDrillRows(((data.followupBoard||{}).items)||[],filter)};
+        return {kind:'followup',title:'追蹤提醒',filterLabel:getFollowupFilterLabel(filter),rows:filterFollowupDrillRows(((data.followupBoard||{}).items)||[],filter)};
       }
       if(type==='reminders'){
         return {kind:'reminder',title:'主管提醒',filterLabel:getReminderFilterLabel(filter),rows:filterReminderRows(((data.supervisorReminderSummary||{}).rows)||[],filter)};
@@ -2818,23 +3236,96 @@
 
     function filterReminderRows(rows,filter){
       return rows.filter(function(row){
+        if(filter==='withdrawn') return row.supervisorStatus==='撤回';
         if(filter==='pending') return row.supervisorStatus==='待處理';
         if(filter==='pendingBossConfirm') return row.supervisorStatus==='待Boss確認';
         if(filter==='overdue') return !!row.isOverdue;
         if(filter==='dueToday') return !!row.isDueToday;
         if(filter==='importantA') return row.importance==='A';
+        if(filter==='allOpen') return !isClosedSupervisorStatus(row.supervisorStatus);
         return true;
       });
     }
 
     function filterCaseRows(rows,filter){
       return rows.filter(function(row){
+        const status=String(row.status||'').trim();
+        const isClosed=!!row.isClosed || ['成交','失敗','結案'].indexOf(status)!==-1;
+        if(filter==='closed') return isClosed;
         if(filter==='overdue') return !!row.isOverdue;
         if(filter==='dueToday') return !!row.isDueToday;
         if(filter==='importantA') return row.importance==='A';
-        if(filter==='allOpen') return !row.isClosed;
+        if(filter==='highPriority') return !isClosed && calculateCasePriorityScore(row)>=70;
+        if(['新案件','洽談中','等待客戶','等待廠商','已報價','暫緩'].indexOf(filter)!==-1) return status===filter;
+        if(filter==='allOpen') return !isClosed;
         return true;
       });
+    }
+
+    function mapFollowupFilter(filter){
+      return {
+        all:'全部待辦',
+        allOpen:'全部待辦',
+        overdue:'逾期',
+        dueToday:'今日到期',
+        importantA:'A級重要',
+        unprocessed:'未處理',
+        needFollowup:'需追蹤'
+      }[filter]||'全部待辦';
+    }
+
+    function mapReminderFilter(filter){
+      return {
+        all:'allOpen',
+        allOpen:'allOpen',
+        overdue:'overdue',
+        dueToday:'dueToday',
+        importantA:'importantA',
+        pending:'pending',
+        pendingBossConfirm:'pendingBossConfirm'
+      }[filter]||'allOpen';
+    }
+
+    function mapCaseFilter(filter){
+      return {
+        all:'allOpen',
+        allOpen:'allOpen',
+        overdue:'overdue',
+        dueToday:'dueToday',
+        importantA:'importantA',
+        highPriority:'highPriority'
+      }[filter]||'allOpen';
+    }
+
+    function calculateCasePriorityScore(row){
+      const status=String(row.status||'').trim();
+      if(row.isClosed || ['成交','失敗','結案'].indexOf(status)!==-1){
+        return -999;
+      }
+
+      let score=0;
+      const importance=String(row.importance||'').toUpperCase();
+      const value=String(row.caseValue||'');
+      const impact=String(row.impactType||'');
+
+      if(row.isOverdue) score+=50;
+      if(row.isDueToday) score+=35;
+      if(importance==='A') score+=30;
+      if(importance==='B') score+=15;
+      if(value==='高') score+=25;
+      if(value==='中') score+=10;
+      if(['收款風險','客訴風險','競品防守'].indexOf(impact)!==-1) score+=25;
+      if(['新案件','洽談中'].indexOf(status)!==-1) score+=10;
+      return score;
+    }
+
+    function compareCustomerCasesForWorkbench(a,b){
+      const scoreA=calculateCasePriorityScore(a);
+      const scoreB=calculateCasePriorityScore(b);
+      if(scoreA!==scoreB){
+        return scoreB-scoreA;
+      }
+      return getTimeMs(b.updatedAt||b.createdAt)-getTimeMs(a.updatedAt||a.createdAt);
     }
 
     function renderDrilldownCard(kind,row){
@@ -2854,7 +3345,7 @@
         const reportId=row.reportId||'';
         return '<div class="detail-card">'+
           '<div class="followup-title"><span>'+escapeHtml(row.customerName||'未命名客戶')+'</span><span class="reply-chip">'+escapeHtml(row.signalType||row.reportType||row.visitStatus||'回報')+'</span></div>'+
-          '<div class="followup-meta">'+escapeHtml(row.timestamp||row.reportTime||'')+'｜'+escapeHtml(row.owner||row.salesName||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
+          '<div class="followup-meta">'+escapeHtml(formatDateTimeDisplay(row.timestamp||row.reportTime))+'｜'+escapeHtml(row.owner||row.salesName||'未指定')+'｜'+escapeHtml(row.customerCode||'無編號')+'</div>'+
           '<div class="followup-copy">'+escapeHtml(trimText(row.content||row.note||'無回報內容',140))+'</div>'+
           '<div class="actions">'+
             '<button class="action action-secondary" data-report-thread="'+escapeAttr(reportId)+'">查看 / 處理</button>'+
@@ -2888,6 +3379,7 @@
         return;
       }
 
+      switchWorkspace('search',{scroll:false});
       document.getElementById('reportHistorySearch').value=keyword;
       queryReportHistory();
       document.getElementById('reportHistorySearch').scrollIntoView({behavior:'smooth',block:'center'});
@@ -3116,14 +3608,14 @@
       const rows=((dashboardData&&dashboardData.followupBoard&&dashboardData.followupBoard.items)||[]);
       const row=rows.find(function(item){return item.replyId===replyId;})||{};
 
-      openCaseModalBase('從短追蹤升級案件',{
+      openCaseModalBase('從追蹤提醒升級案件',{
         customerCode:row.customerCode||'',
         customerName:row.customerName||'',
         owner:row.owner||'',
-        title:'短追蹤｜'+(row.customerName||'未命名客戶'),
+        title:'追蹤提醒｜'+(row.customerName||'未命名客戶'),
         caseType:'其他',
-        content:'Boss 短追蹤內容：'+(row.latestReplyContent||row.reportContent||''),
-        source:'短追蹤',
+        content:'Boss 追蹤提醒內容：'+(row.latestReplyContent||row.reportContent||''),
+        source:'追蹤提醒',
         replyId:replyId,
         importance:row.latestBossImportance||'B',
         nextFollowDate:row.nextFollowDate||getTomorrowInputDate()
@@ -3253,7 +3745,7 @@
               '<span>'+escapeHtml(report.customerName||'未命名客戶')+'</span>'+
               '<span class="report-type">'+escapeHtml(report.reportType||report.status||'回報')+'</span>'+
             '</div>'+
-            '<div class="report-meta">回報時間 '+escapeHtml(report.timestamp||report.reportTime||'')+'｜業務 '+escapeHtml(report.owner||'未指定')+'</div>'+
+            '<div class="report-meta">回報時間 '+escapeHtml(formatDateTimeDisplay(report.timestamp||report.reportTime))+'｜業務 '+escapeHtml(report.owner||'未指定')+'</div>'+
             renderReportTagRows(report)+
             '<div class="report-content">'+escapeHtml(report.content||report.note||'無回報內容')+'</div>'+
           '</div>'+
