@@ -270,6 +270,19 @@
     .split{display:grid;grid-template-columns:1fr;gap:10px}
     .sector-grid{display:grid;grid-template-columns:1fr;gap:9px}
     .sector-card{padding:12px;border-color:rgba(0,229,192,.18)}
+    .sales-notice-manager{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+    .notice-stat{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
+    .notice-stat strong{display:block;color:#fff;font-size:28px;line-height:1;font-weight:950}
+    .notice-stat span{display:block;margin-top:5px;color:var(--muted);font-size:12px;font-weight:900}
+    .notice-list{display:grid;gap:8px;margin-top:10px}
+    .notice-admin-card{border:1px solid var(--line-soft);border-left:4px solid rgba(0,229,192,.55);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
+    .notice-admin-card.disabled{border-left-color:rgba(148,163,184,.45);opacity:.72}
+    .notice-admin-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+    .notice-admin-title{color:#fff;font-size:16px;font-weight:950;line-height:1.35;word-break:break-word}
+    .notice-admin-meta{margin-top:6px;color:var(--muted);font-size:12px;line-height:1.55;word-break:break-word}
+    .notice-admin-actions{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+    .notice-form{border-top:1px solid var(--line-soft);margin-top:12px;padding-top:12px}
+    .notice-form-title{color:#fff;font-size:16px;font-weight:950;margin-bottom:9px}
     .sector-code{font-size:11px;color:var(--teal);font-weight:900;text-transform:uppercase}
     .sector-name{font-size:18px;font-weight:900;margin-top:3px}
     .sector-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin-top:10px}
@@ -472,6 +485,7 @@
       .metric{min-height:106px;padding:11px}
       .metric-value{font-size:38px;min-height:38px}
       .sector-grid,.split,.analysis-grid{grid-template-columns:1fr}
+      .sales-notice-manager{grid-template-columns:1fr}
       .signal-funnel{grid-template-columns:1fr}
       .funnel-flow{display:block}
       .quick-tag-summary-grid{grid-template-columns:1fr}
@@ -545,6 +559,19 @@
                 </div>
               </div>
               <div class="overview-priority" id="todayPriority"></div>
+            </div>
+
+            <div class="workspace-group">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">本期主推</div>
+                  <h2 class="section-title">本期主推管理</h2>
+                  <div class="section-desc">管理業務首頁顯示的本期主推、促銷與注意事項。</div>
+                </div>
+              </div>
+              <div class="panel" id="salesNoticeBossCard">
+                <div class="empty">公告資料載入中...</div>
+              </div>
             </div>
 
             <div class="workspace-group">
@@ -843,6 +870,68 @@
     </div>
   </div>
 
+  <div class="thread-modal" id="salesNoticeModal" aria-hidden="true">
+    <div class="thread-panel">
+      <div class="thread-head">
+        <div>
+          <div class="section-kicker">本期主推</div>
+          <div class="thread-title">本期主推 / 促銷公告管理</div>
+        </div>
+        <button class="thread-close" onclick="closeSalesNoticeModal()">×</button>
+      </div>
+      <div class="thread-block">
+        <div class="thread-head">
+          <div>
+            <div class="thread-label">公告列表</div>
+            <div class="muted">業務端只會看到啟用、符合日期與區域的公告。</div>
+          </div>
+          <button class="action action-secondary" onclick="newSalesNotice()">新增公告</button>
+        </div>
+        <div id="salesNoticeAdminList" class="notice-list">
+          <div class="empty">公告資料載入中...</div>
+        </div>
+      </div>
+      <div class="thread-block notice-form">
+        <div class="notice-form-title" id="salesNoticeFormTitle">新增公告</div>
+        <input type="hidden" id="noticeId">
+        <div class="form-row">
+          <select class="form-control" id="noticeEnabled">
+            <option value="是">啟用：是</option>
+            <option value="否">啟用：否</option>
+          </select>
+          <input class="form-control" id="noticeSort" inputmode="numeric" placeholder="排序，例如 1">
+          <select class="form-control" id="noticeType">
+            <option value="本期主推">本期主推</option>
+            <option value="促銷">促銷</option>
+            <option value="注意事項">注意事項</option>
+          </select>
+        </div>
+        <input class="form-control" id="noticeTitle" placeholder="標題">
+        <textarea class="form-control" id="noticeSummary" placeholder="摘要，業務首頁卡片短文"></textarea>
+        <textarea class="form-control" id="noticeContent" placeholder="完整內容"></textarea>
+        <textarea class="form-control" id="noticeSalesTalk" placeholder="業務話術，業務可直接跟客戶說"></textarea>
+        <textarea class="form-control" id="noticeCaution" placeholder="注意事項，例如價格不要外流"></textarea>
+        <div class="form-row">
+          <select class="form-control" id="noticeAudience">
+            <option value="全部">適用對象：全部</option>
+            <option value="溪南">適用對象：溪南</option>
+            <option value="溪北">適用對象：溪北</option>
+          </select>
+          <select class="form-control" id="noticeImportance">
+            <option value="一般">重要程度：一般</option>
+            <option value="重要">重要程度：重要</option>
+          </select>
+          <div></div>
+        </div>
+        <div class="form-row">
+          <input class="form-control" id="noticeStartDate" type="date">
+          <input class="form-control" id="noticeEndDate" type="date">
+          <button class="action action-secondary" id="salesNoticeSaveBtn" onclick="saveSalesNoticeFromForm()">儲存公告</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
   <script>
@@ -867,10 +956,14 @@
     let activeDrilldown=null;
     let toastTimer=null;
     let continueTrackingSource=null;
+    let salesNotices=[];
+    let salesNoticesLoaded=false;
+    let salesNoticeEditingId='';
     const modalSnapshots={
       report:'',
       case:'',
-      continueTracking:''
+      continueTracking:'',
+      notice:''
     };
 
     Array.prototype.forEach.call(document.querySelectorAll('[data-workspace-target]'),function(btn){
@@ -1065,6 +1158,11 @@
 
       if(modal.id==='reportThreadModal'){
         closeReportThread();
+        return;
+      }
+
+      if(modal.id==='salesNoticeModal'){
+        closeSalesNoticeModal();
       }
     }
 
@@ -1087,6 +1185,10 @@
 
       if(modalId==='continueTrackingModal'){
         return getContinueTrackingSignature()!==modalSnapshots.continueTracking;
+      }
+
+      if(modalId==='salesNoticeModal'){
+        return getSalesNoticeFormSignature()!==modalSnapshots.notice;
       }
 
       return false;
@@ -1133,6 +1235,14 @@
         getFieldValue('continueImportance'),
         getFieldValue('continueNote')
       ].join('|');
+    }
+
+    function getSalesNoticeFormSignature(){
+      return [
+        'noticeId','noticeEnabled','noticeSort','noticeType','noticeTitle','noticeSummary',
+        'noticeContent','noticeSalesTalk','noticeCaution','noticeAudience','noticeImportance',
+        'noticeStartDate','noticeEndDate'
+      ].map(getFieldValue).join('|');
     }
 
     function showToast(message,type){
@@ -1301,6 +1411,7 @@
       document.getElementById('generatedAt').textContent=formatDateTimeDisplay(data.generatedAt)||data.generatedAt||'';
       renderMetrics(data.operationSummary||{});
       renderTodayPriority(data);
+      renderBossSalesNoticeCard();
       renderSystemDataStatus(data.operationSummary||{});
       renderOwnerSummary(data.ownerSummary||[]);
       renderPendingDrafts(data.pendingDrafts||[]);
@@ -1313,6 +1424,7 @@
       renderQuickTagSummary(data.quickTagSummary||{});
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
+      loadBossSalesNotices(false);
       switchWorkspace(activeWorkspace||'overview',{scroll:false});
     }
 
@@ -1347,6 +1459,377 @@
           handleMetricClick(btn.getAttribute('data-priority-type'),btn.getAttribute('data-priority-filter'));
         });
       });
+    }
+
+    function loadBossSalesNotices(openModalAfterLoad){
+      return jsonp({
+        action:'getBossSalesNotices',
+        token:API_TOKEN
+      }).then(function(data){
+        salesNotices=Array.isArray(data&&data.notices)?data.notices:[];
+        salesNoticesLoaded=true;
+        renderBossSalesNoticeCard(data&&data.summary);
+        renderSalesNoticeAdminList();
+
+        if(openModalAfterLoad){
+          openSalesNoticeModal();
+        }
+
+        return data;
+      }).catch(function(err){
+        salesNotices=[];
+        salesNoticesLoaded=true;
+        renderBossSalesNoticeCard();
+
+        const list=document.getElementById('salesNoticeAdminList');
+        if(list){
+          list.innerHTML='<div class="empty">公告載入失敗：'+escapeHtml(err.message)+'</div>';
+        }
+
+        showToast('公告資料載入失敗','error');
+      });
+    }
+
+    function renderBossSalesNoticeCard(summary){
+      const target=document.getElementById('salesNoticeBossCard');
+
+      if(!target){
+        return;
+      }
+
+      if(!salesNoticesLoaded){
+        target.innerHTML='<div class="empty">公告資料載入中...</div>';
+        return;
+      }
+
+      summary=summary||computeSalesNoticeSummary(salesNotices);
+      target.innerHTML=
+        '<div class="sales-notice-manager">'+
+          '<div class="notice-stat"><strong>'+escapeHtml(summary.activeCount||0)+'</strong><span>目前啟用</span></div>'+
+          '<div class="notice-stat"><strong>'+escapeHtml(summary.expiringSoonCount||0)+'</strong><span>即將到期</span></div>'+
+          '<div class="notice-stat"><strong>'+escapeHtml(summary.importantCount||0)+'</strong><span>重要公告</span></div>'+
+        '</div>'+
+        '<div class="actions">'+
+          '<button class="action action-secondary" onclick="openSalesNoticeModal()">管理公告</button>'+
+        '</div>';
+    }
+
+    function computeSalesNoticeSummary(rows){
+      const now=new Date();
+      const soon=new Date(now.getTime()+7*24*60*60*1000);
+      const summary={activeCount:0,expiringSoonCount:0,importantCount:0};
+
+      (rows||[]).forEach(function(notice){
+        if(!isNoticeActiveNow(notice,now)){
+          return;
+        }
+
+        summary.activeCount++;
+
+        if(notice.importance==='重要'){
+          summary.importantCount++;
+        }
+
+        const end=parseNoticeDate(notice.endDate);
+        if(end && end>=stripTime(now) && end<=stripTime(soon)){
+          summary.expiringSoonCount++;
+        }
+      });
+
+      return summary;
+    }
+
+    function isNoticeActiveNow(notice,now){
+      if(!notice || notice.enabled!=='是'){
+        return false;
+      }
+
+      const today=stripTime(now||new Date());
+      const start=parseNoticeDate(notice.startDate);
+      const end=parseNoticeDate(notice.endDate);
+
+      if(start && start>today){
+        return false;
+      }
+
+      if(end && end<today){
+        return false;
+      }
+
+      return true;
+    }
+
+    function stripTime(date){
+      return new Date(date.getFullYear(),date.getMonth(),date.getDate());
+    }
+
+    function parseNoticeDate(value){
+      if(!value){
+        return null;
+      }
+
+      if(value instanceof Date && !isNaN(value.getTime())){
+        return stripTime(value);
+      }
+
+      const text=String(value||'').trim();
+      const matched=text.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+
+      if(matched){
+        return new Date(Number(matched[1]),Number(matched[2])-1,Number(matched[3]));
+      }
+
+      const parsed=new Date(text);
+      return isNaN(parsed.getTime()) ? null : stripTime(parsed);
+    }
+
+    function openSalesNoticeModal(){
+      const modal=document.getElementById('salesNoticeModal');
+
+      if(!salesNoticesLoaded){
+        loadBossSalesNotices(true);
+        return;
+      }
+
+      renderSalesNoticeAdminList();
+      if(!salesNoticeEditingId){
+        newSalesNotice(true);
+      }
+
+      modal.classList.add('show');
+      modal.setAttribute('aria-hidden','false');
+      addDateShortcuts('noticeStartDate');
+      addDateShortcuts('noticeEndDate');
+      setTimeout(function(){
+        modalSnapshots.notice=getSalesNoticeFormSignature();
+      },0);
+    }
+
+    function closeSalesNoticeModal(){
+      if(!confirmCloseIfDirty('salesNoticeModal')){
+        return;
+      }
+
+      const modal=document.getElementById('salesNoticeModal');
+      if(modal){
+        modal.classList.remove('show');
+        modal.setAttribute('aria-hidden','true');
+      }
+    }
+
+    function renderSalesNoticeAdminList(){
+      const target=document.getElementById('salesNoticeAdminList');
+
+      if(!target){
+        return;
+      }
+
+      if(!salesNoticesLoaded){
+        target.innerHTML='<div class="empty">公告資料載入中...</div>';
+        return;
+      }
+
+      if(!salesNotices.length){
+        target.innerHTML='<div class="empty">目前沒有公告。</div>';
+        return;
+      }
+
+      target.innerHTML=salesNotices.map(function(notice){
+        const disabled=notice.enabled==='否';
+        return '<div class="notice-admin-card '+(disabled?'disabled':'')+'">'+
+          '<div class="notice-admin-head">'+
+            '<div>'+
+              '<div class="notice-admin-title">'+escapeHtml(notice.title||'未命名公告')+'</div>'+
+              '<div class="notice-admin-meta">'+
+                escapeHtml(notice.noticeType||'')+'｜'+escapeHtml(notice.enabled||'')+'｜'+
+                escapeHtml(notice.audience||'全部')+'｜'+escapeHtml(notice.importance||'一般')+'｜排序 '+escapeHtml(notice.sortOrder||99)+'<br>'+
+                '活動期間：'+escapeHtml(formatNoticePeriod(notice))+'<br>'+
+                '更新時間：'+escapeHtml(formatDateTimeDisplay(notice.updatedAt)||notice.updatedAt||'')+
+              '</div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="notice-admin-actions">'+
+            '<button class="action action-secondary" onclick="editSalesNotice(\''+escapeAttr(notice.noticeId||'')+'\')">編輯</button>'+
+            '<button class="action action-secondary" onclick="toggleSalesNotice(\''+escapeAttr(notice.noticeId||'')+'\',\''+(disabled?'是':'否')+'\')">'+(disabled?'啟用':'停用')+'</button>'+
+          '</div>'+
+        '</div>';
+      }).join('');
+    }
+
+    function formatNoticePeriod(notice){
+      const start=notice&&notice.startDate ? formatDateOnlyDisplay(notice.startDate) : '';
+      const end=notice&&notice.endDate ? formatDateOnlyDisplay(notice.endDate) : '';
+
+      if(start && end){
+        return start+' ～ '+end;
+      }
+
+      if(start){
+        return start+' 起';
+      }
+
+      if(end){
+        return '到 '+end;
+      }
+
+      return '未設定';
+    }
+
+    function newSalesNotice(skipSnapshot){
+      salesNoticeEditingId='';
+      setFieldValue('noticeId','');
+      setFieldValue('noticeEnabled','是');
+      setFieldValue('noticeSort','99');
+      setFieldValue('noticeType','本期主推');
+      setFieldValue('noticeTitle','');
+      setFieldValue('noticeSummary','');
+      setFieldValue('noticeContent','');
+      setFieldValue('noticeSalesTalk','');
+      setFieldValue('noticeCaution','');
+      setFieldValue('noticeAudience','全部');
+      setFieldValue('noticeImportance','一般');
+      setFieldValue('noticeStartDate',normalizeDateForInput(new Date()));
+      setFieldValue('noticeEndDate','');
+
+      const title=document.getElementById('salesNoticeFormTitle');
+      if(title){
+        title.textContent='新增公告';
+      }
+
+      if(!skipSnapshot){
+        setTimeout(function(){
+          modalSnapshots.notice=getSalesNoticeFormSignature();
+        },0);
+      }
+    }
+
+    function editSalesNotice(noticeId){
+      const notice=salesNotices.find(function(row){
+        return row.noticeId===noticeId;
+      });
+
+      if(!notice){
+        showToast('找不到公告','error');
+        return;
+      }
+
+      salesNoticeEditingId=noticeId;
+      setFieldValue('noticeId',notice.noticeId||'');
+      setFieldValue('noticeEnabled',notice.enabled||'是');
+      setFieldValue('noticeSort',notice.sortOrder||99);
+      setFieldValue('noticeType',notice.noticeType||'本期主推');
+      setFieldValue('noticeTitle',notice.title||'');
+      setFieldValue('noticeSummary',notice.summary||'');
+      setFieldValue('noticeContent',notice.content||'');
+      setFieldValue('noticeSalesTalk',notice.salesTalk||'');
+      setFieldValue('noticeCaution',notice.caution||'');
+      setFieldValue('noticeAudience',notice.audience||'全部');
+      setFieldValue('noticeImportance',notice.importance||'一般');
+      setFieldValue('noticeStartDate',normalizeDateForInput(notice.startDate));
+      setFieldValue('noticeEndDate',normalizeDateForInput(notice.endDate));
+
+      const title=document.getElementById('salesNoticeFormTitle');
+      if(title){
+        title.textContent='編輯公告｜'+(notice.title||notice.noticeId||'');
+      }
+
+      setTimeout(function(){
+        modalSnapshots.notice=getSalesNoticeFormSignature();
+      },0);
+
+      const form=document.querySelector('#salesNoticeModal .notice-form');
+      form&&form.scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    function saveSalesNoticeFromForm(){
+      const button=document.getElementById('salesNoticeSaveBtn');
+      const title=getFieldValue('noticeTitle').trim();
+
+      if(!title){
+        showToast('標題不可空白','error');
+        return;
+      }
+
+      if(button){
+        button.disabled=true;
+        button.textContent='儲存中...';
+      }
+
+      jsonp({
+        action:'saveSalesNotice',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          noticeId:getFieldValue('noticeId'),
+          enabled:getFieldValue('noticeEnabled')||'是',
+          sortOrder:getFieldValue('noticeSort')||99,
+          noticeType:getFieldValue('noticeType')||'本期主推',
+          title:title,
+          summary:getFieldValue('noticeSummary'),
+          content:getFieldValue('noticeContent'),
+          salesTalk:getFieldValue('noticeSalesTalk'),
+          caution:getFieldValue('noticeCaution'),
+          audience:getFieldValue('noticeAudience')||'全部',
+          startDate:formatDateForSave(getFieldValue('noticeStartDate')),
+          endDate:formatDateForSave(getFieldValue('noticeEndDate')),
+          importance:getFieldValue('noticeImportance')||'一般'
+        })
+      }).then(function(){
+        showToast('公告已儲存');
+        salesNoticeEditingId='';
+        return loadBossSalesNotices(false);
+      }).then(function(){
+        newSalesNotice(true);
+        modalSnapshots.notice=getSalesNoticeFormSignature();
+      }).catch(function(err){
+        showToast('公告儲存失敗：'+err.message,'error');
+      }).finally(function(){
+        if(button){
+          button.disabled=false;
+          button.textContent='儲存公告';
+        }
+      });
+    }
+
+    function toggleSalesNotice(noticeId,enabled){
+      jsonp({
+        action:'toggleSalesNotice',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          noticeId:noticeId,
+          enabled:enabled
+        })
+      }).then(function(){
+        showToast(enabled==='是'?'公告已啟用':'公告已停用');
+        return loadBossSalesNotices(false);
+      }).catch(function(err){
+        showToast('公告狀態更新失敗：'+err.message,'error');
+      });
+    }
+
+    function voidSalesNotice(noticeId){
+      if(!confirm('確定要停用這則公告嗎？')){
+        return;
+      }
+
+      jsonp({
+        action:'voidSalesNotice',
+        token:API_TOKEN,
+        payload:JSON.stringify({
+          noticeId:noticeId
+        })
+      }).then(function(){
+        showToast('公告已停用');
+        return loadBossSalesNotices(false);
+      }).catch(function(err){
+        showToast('公告停用失敗：'+err.message,'error');
+      });
+    }
+
+    function setFieldValue(id,value){
+      const el=document.getElementById(id);
+      if(el){
+        el.value=value||'';
+      }
     }
 
     function loadSalesSummary(forceRefresh){
