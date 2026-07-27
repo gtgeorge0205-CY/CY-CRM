@@ -445,6 +445,16 @@
     .result-btn:first-child{border-top:0}
     .detail{margin-top:10px;background:#0b1118;border:1px solid var(--line);border-radius:8px;padding:12px}
     .muted{color:var(--muted)}
+    .workspace-nav,.workspace-tools,.followup-filter{
+      scrollbar-width:thin;
+      scrollbar-color:rgba(0,229,192,.45) rgba(255,255,255,.04);
+    }
+    .workspace-nav::-webkit-scrollbar,
+    .workspace-tools::-webkit-scrollbar,
+    .followup-filter::-webkit-scrollbar{height:4px}
+    .workspace-nav::-webkit-scrollbar-thumb,
+    .workspace-tools::-webkit-scrollbar-thumb,
+    .followup-filter::-webkit-scrollbar-thumb{background:rgba(0,229,192,.38);border-radius:999px}
     .toast{position:fixed;right:16px;bottom:16px;z-index:90;max-width:min(360px,calc(100vw - 32px));padding:11px 14px;border:1px solid rgba(0,229,192,.35);border-radius:10px;background:rgba(9,18,26,.96);box-shadow:var(--shadow);color:#e8fbff;font-weight:800;opacity:0;transform:translateY(12px);pointer-events:none;transition:opacity .18s ease,transform .18s ease}
     .toast.show{opacity:1;transform:translateY(0)}
     .toast.error{border-color:rgba(248,113,113,.55);color:#fee2e2}
@@ -468,50 +478,305 @@
     }
 
     @media (max-width:768px){
-      .shell{padding:10px;padding-bottom:calc(22px + env(safe-area-inset-bottom))}
-      .topbar{padding:12px;gap:10px;align-items:flex-start}
+      html,body{overflow-x:hidden}
+      .shell{
+        padding:8px;
+        padding-bottom:calc(22px + env(safe-area-inset-bottom));
+        overflow-x:hidden;
+      }
+      .topbar{
+        padding:10px;
+        gap:9px;
+        align-items:flex-start;
+        border-radius:8px;
+      }
       .topbar-content{min-width:0}
-      .title{font-size:21px;line-height:1.16;word-break:keep-all}
+      .title{
+        font-size:20px;
+        line-height:1.18;
+        word-break:keep-all;
+        overflow-wrap:anywhere;
+      }
       .subtitle{font-size:12px;line-height:1.35}
+      .eyebrow{font-size:11px;margin-bottom:4px}
       .refresh{min-height:44px;padding:8px 10px}
-      .boss-workbench{display:block;margin-top:10px}
-      .workspace-nav{position:relative;top:auto;display:flex;overflow-x:auto;margin-bottom:10px;padding:8px}
+      .boss-workbench{
+        display:block;
+        margin-top:8px;
+        min-width:0;
+      }
+      .workspace-main{width:100%;min-width:0}
+      .workspace-nav{
+        position:sticky;
+        top:0;
+        z-index:30;
+        display:flex;
+        gap:7px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        max-width:100%;
+        margin:0 0 10px;
+        padding:7px;
+        border-radius:8px;
+        -webkit-overflow-scrolling:touch;
+        scroll-snap-type:x proximity;
+      }
       .workspace-nav-title{display:none}
-      .workspace-tab{flex:0 0 auto;white-space:nowrap;min-height:42px}
-      .workspace-hero{padding:11px 12px}
-      .workspace-title{font-size:18px}
-      .overview-priority{grid-template-columns:1fr}
-      .grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-      .metric{min-height:106px;padding:11px}
-      .metric-value{font-size:38px;min-height:38px}
-      .sector-grid,.split,.analysis-grid{grid-template-columns:1fr}
-      .sales-notice-manager{grid-template-columns:1fr}
+      .workspace-tab{
+        flex:0 0 auto;
+        width:auto;
+        min-width:max-content;
+        min-height:42px;
+        padding:8px 12px;
+        white-space:nowrap;
+        text-align:center;
+        scroll-snap-align:start;
+      }
+      .workspace-tab.active{
+        box-shadow:inset 0 -3px 0 var(--teal);
+      }
+      .workspace-hero{
+        padding:10px 11px;
+        margin-bottom:10px;
+      }
+      .workspace-title{font-size:18px;line-height:1.28}
+      .workspace-desc{font-size:12px;line-height:1.55}
+      .workspace-group{margin-top:12px}
+      .section-head{
+        align-items:flex-start;
+        gap:8px;
+      }
+      .section-title{font-size:14px;line-height:1.35}
+      .section-desc{font-size:12px;line-height:1.5}
+      .grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+      .metric{
+        min-height:104px;
+        padding:10px;
+      }
+      .metric-label{
+        font-size:11px;
+        line-height:1.3;
+        white-space:normal;
+      }
+      .metric-value{
+        font-size:36px;
+        min-height:36px;
+      }
+      .metric-note{
+        font-size:11px;
+        line-height:1.35;
+      }
+      .overview-priority{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+      .priority-card{
+        min-height:78px;
+        padding:10px;
+      }
+      .priority-card strong{font-size:25px}
+      .priority-card span{font-size:12px;line-height:1.35}
+      .workspace-tools,
+      .followup-filter{
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        overflow-y:hidden;
+        max-width:100%;
+        padding:0 2px 5px;
+        -webkit-overflow-scrolling:touch;
+      }
+      .workspace-chip,
+      .filter-btn{
+        flex:0 0 auto;
+        min-height:42px;
+        white-space:nowrap;
+        padding:8px 12px;
+      }
+      .sector-grid,
+      .split,
+      .analysis-grid,
+      .quick-tag-summary-grid,
+      .action-signal-wrap{
+        grid-template-columns:1fr;
+      }
+      .sales-notice-manager{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
+      }
+      .notice-stat{padding:9px 7px;text-align:center}
+      .notice-stat strong{font-size:26px}
+      .notice-stat span{font-size:11px;line-height:1.25}
+      .notice-admin-head{
+        display:block;
+      }
+      .notice-admin-card{
+        max-width:100%;
+        overflow-wrap:anywhere;
+      }
+      .notice-admin-actions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+      }
       .signal-funnel{grid-template-columns:1fr}
       .funnel-flow{display:block}
-      .quick-tag-summary-grid{grid-template-columns:1fr}
       .sales-status-grid{grid-template-columns:1fr 1fr}
-      .action-signal-wrap{grid-template-columns:1fr}
       .signal-title{font-size:19px}
       .signal-head{align-items:flex-start}
-      .followup-summary{grid-template-columns:1fr 1fr}
-      .followup-title{font-size:17px}
-      .followup-filter{gap:6px}
-      .filter-btn{flex:1 1 auto}
-      .form-row{grid-template-columns:1fr}
-      .thread-modal{align-items:flex-end;padding:8px}
-      .thread-panel{max-height:94vh;padding:12px}
-      .action-signal-card{padding:10px}
-      .panel,.sector-card,.search-box{padding:11px}
-      .list-card{padding:11px}
-      .section{margin-top:13px}
+      .signal-meta,
+      .signal-numbers,
+      .report-tag-row,
+      .reply-state,
+      .owner-counts,
+      .status-chip-wrap{
+        gap:6px;
+      }
+      .followup-summary,
+      .mini-summary{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .followup-title,
+      .report-title,
+      .notice-admin-title{
+        font-size:17px;
+        line-height:1.35;
+      }
+      .card-meta,
+      .followup-meta,
+      .report-meta,
+      .notice-admin-meta{
+        font-size:12px;
+        line-height:1.55;
+      }
+      .report-head{
+        grid-template-columns:1fr;
+        gap:6px;
+      }
+      .report-count{
+        font-size:38px;
+      }
+      .form-row{
+        grid-template-columns:1fr;
+      }
+      .form-control{
+        min-height:46px;
+        font-size:16px;
+      }
+      textarea.form-control{
+        min-height:128px;
+      }
+      .actions{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
+      .action{
+        width:100%;
+        justify-content:center;
+        text-align:center;
+        min-height:46px;
+        padding:10px;
+        line-height:1.35;
+      }
+      .thread-modal{
+        align-items:flex-end;
+        padding:0;
+      }
+      .thread-panel,
+      .thread-panel.compact-panel{
+        width:100%;
+        height:calc(100svh - env(safe-area-inset-top));
+        max-height:calc(100svh - env(safe-area-inset-top));
+        border-left:0;
+        border-right:0;
+        border-bottom:0;
+        border-radius:14px 14px 0 0;
+        padding:12px;
+        padding-bottom:calc(18px + env(safe-area-inset-bottom));
+        overflow-y:auto;
+        -webkit-overflow-scrolling:touch;
+      }
+      .thread-head{
+        position:sticky;
+        top:0;
+        z-index:2;
+        margin:-12px -12px 10px;
+        padding:12px;
+        background:linear-gradient(180deg,#0b1118 85%,rgba(11,17,24,.92));
+        border-bottom:1px solid rgba(0,229,192,.16);
+      }
+      .thread-title{
+        font-size:17px;
+        line-height:1.35;
+      }
+      .thread-close{
+        min-width:46px;
+        min-height:46px;
+      }
+      .thread-block{
+        padding:10px;
+        margin-top:9px;
+      }
+      .date-shortcuts button{
+        min-height:38px;
+        padding:7px 11px;
+      }
+      .action-signal-card,
+      .detail-card,
+      .case-card,
+      .reminder-card{
+        padding:10px;
+        max-width:100%;
+        overflow-wrap:anywhere;
+      }
+      .panel,
+      .sector-card,
+      .search-box,
+      .list-card{
+        padding:10px;
+        max-width:100%;
+        overflow-wrap:anywhere;
+      }
+      .section{margin-top:12px}
+      .search-input{
+        font-size:16px;
+        min-height:48px;
+      }
+      .toast{
+        left:10px;
+        right:10px;
+        bottom:calc(10px + env(safe-area-inset-bottom));
+        max-width:none;
+      }
     }
 
-    @media (max-width:420px){
+    @media (max-width:480px){
       .topbar{flex-direction:column}
       .refresh{width:100%}
       .grid{grid-template-columns:1fr 1fr}
       .sales-status-grid{grid-template-columns:1fr}
       .followup-summary{grid-template-columns:1fr}
+      .mini-summary{grid-template-columns:1fr 1fr}
+      .sales-notice-manager{grid-template-columns:1fr}
+      .actions,
+      .notice-admin-actions{
+        grid-template-columns:1fr;
+      }
+      .metric{min-height:98px}
+      .metric-value{font-size:32px}
+      .workspace-tab{
+        min-height:40px;
+        padding:8px 10px;
+      }
+      .panel,
+      .sector-card,
+      .search-box,
+      .list-card,
+      .thread-block{
+        padding:9px;
+      }
     }
   </style>
 </head>
