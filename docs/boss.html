@@ -249,6 +249,33 @@
     .case-placeholder-title{font-size:19px;font-weight:950;color:#fff}
     .case-placeholder-copy{color:var(--silver);font-size:13px;line-height:1.7}
     .system-data{margin-top:10px;border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.024);padding:10px;color:var(--silver);font-size:13px}
+    .line-admin-shell{display:grid;gap:12px}
+    .line-admin-login{max-width:520px}
+    .line-admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+    .line-admin-stat{border:1px solid var(--line-soft);border-radius:8px;background:rgba(255,255,255,.026);padding:10px}
+    .line-admin-stat strong{display:block;color:#fff;font-size:26px;line-height:1}
+    .line-admin-stat span{display:block;color:var(--muted);font-size:12px;font-weight:900;margin-top:7px}
+    .line-admin-block{border:1px solid var(--line-soft);border-radius:8px;background:rgba(7,12,18,.4);padding:11px}
+    .line-admin-block-title{font-size:14px;font-weight:950;color:#fff;margin-bottom:8px}
+    .line-admin-form{display:grid;grid-template-columns:180px minmax(0,1fr) auto;gap:8px;align-items:start}
+    .line-admin-form.test{grid-template-columns:220px minmax(0,1fr)}
+    .line-admin-form.test textarea,.line-admin-form.test .line-admin-form-actions{grid-column:1/-1}
+    .line-binding-code{margin-top:10px;border:1px solid rgba(0,229,192,.36);border-radius:8px;background:rgba(0,229,192,.08);padding:11px}
+    .line-binding-code strong{display:block;color:#fff;font-size:28px;letter-spacing:.12em;margin:5px 0}
+    .line-binding-list,.line-log-list{display:grid;gap:8px}
+    .line-binding-card,.line-log-card{border:1px solid var(--line-soft);border-left:4px solid rgba(148,163,184,.45);border-radius:8px;background:rgba(255,255,255,.025);padding:10px}
+    .line-binding-card.pending{border-left-color:var(--yellow)}
+    .line-binding-card.enabled{border-left-color:var(--teal)}
+    .line-binding-card.disabled{opacity:.76}
+    .line-binding-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+    .line-binding-name{font-size:16px;font-weight:950;color:#fff}
+    .line-status{display:inline-flex;border:1px solid var(--line-soft);border-radius:8px;padding:3px 7px;font-size:11px;font-weight:950;color:var(--silver)}
+    .line-status.pending{border-color:rgba(250,204,21,.42);color:#fde68a;background:rgba(250,204,21,.09)}
+    .line-status.enabled{border-color:rgba(0,229,192,.38);color:#dffff9;background:rgba(0,229,192,.09)}
+    .line-binding-meta,.line-log-meta{font-size:12px;color:var(--muted);line-height:1.55;margin-top:5px;word-break:break-word}
+    .line-admin-actions{display:flex;flex-wrap:wrap;gap:7px;margin-top:9px}
+    .line-admin-actions .action{min-height:38px;padding:7px 10px}
+    .line-admin-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
     .drilldown{display:none;margin-top:10px}
     .drilldown.show{display:block}
     .drilldown-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
@@ -599,9 +626,20 @@
       .split,
       .analysis-grid,
       .quick-tag-summary-grid,
-      .action-signal-wrap{
+      .action-signal-wrap,
+      .line-admin-grid{
         grid-template-columns:1fr;
       }
+      .line-admin-form,
+      .line-admin-form.test{
+        grid-template-columns:1fr;
+      }
+      .line-admin-form.test textarea,
+      .line-admin-form.test .line-admin-form-actions{
+        grid-column:auto;
+      }
+      .line-binding-head{display:block}
+      .line-status{margin-top:6px}
       .sales-notice-manager{
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:8px;
@@ -887,6 +925,19 @@
                 </div>
               </div>
               <div class="panel" id="customerStatusSummary"></div>
+            </div>
+
+            <div class="workspace-group" id="lineAdminSection">
+              <div class="section-head">
+                <div>
+                  <div class="section-kicker">LINE 推播</div>
+                  <h2 class="section-title">LINE 綁定與測試推播</h2>
+                  <div class="section-desc">管理 Boss、溪北、溪南的 LINE 身分綁定；本版只提供綁定與手動測試，不會自動推播主管提醒或客戶案件。</div>
+                </div>
+              </div>
+              <div class="panel" id="lineAdminCard">
+                <div class="loading">準備 LINE 管理功能中...</div>
+              </div>
             </div>
 
             <div class="workspace-group">
@@ -1202,6 +1253,8 @@
   <script>
     const API_BASE='https://script.google.com/macros/s/AKfycbyIFfeLQBG_7iBhN4gNA5QWXa1aLHczrlxWF_24gcanlL_XOvYo_nudFFSaLzJFJsnSrQ/exec';
     const API_TOKEN='CYCRM_2026_write_test';
+    const LINE_GATEWAY_BASE='https://xinqingyang-line-gateway.gtgeorge0205.workers.dev';
+    const LINE_GATEWAY_SESSION_KEY='xqy_line_admin_session_v1';
     const JSONP_TIMEOUT_MS=20000;
     let dashboardData=null;
     let customers=[];
@@ -1224,6 +1277,8 @@
     let salesNotices=[];
     let salesNoticesLoaded=false;
     let salesNoticeEditingId='';
+    let lineAdminData=null;
+    let lastLineBindingInstruction='';
     const modalSnapshots={
       report:'',
       case:'',
@@ -1690,6 +1745,7 @@
       renderReportSummary(data.reportSummary||{});
       renderCustomerStatus(data.customerStatusSummary||[],data.customerStatusExtra||{});
       loadBossSalesNotices(false);
+      initializeLineAdmin();
       switchWorkspace(activeWorkspace||'overview',{scroll:false});
     }
 
@@ -4539,6 +4595,424 @@
         console.log('void unmatched draft failed',err.message);
         showToast('作廢失敗：'+err.message,'error');
       });
+    }
+
+    function initializeLineAdmin(){
+      const token=getLineAdminSession();
+      renderLineAdminLocked('');
+
+      if(token){
+        loadLineAdminOverview();
+      }
+    }
+
+    function getLineAdminSession(){
+      try{
+        return sessionStorage.getItem(LINE_GATEWAY_SESSION_KEY)||'';
+      }catch(err){
+        return '';
+      }
+    }
+
+    function saveLineAdminSession(token){
+      try{
+        if(token){
+          sessionStorage.setItem(LINE_GATEWAY_SESSION_KEY,token);
+        }else{
+          sessionStorage.removeItem(LINE_GATEWAY_SESSION_KEY);
+        }
+      }catch(err){
+        console.log('LINE session storage unavailable');
+      }
+    }
+
+    function renderLineAdminLocked(errorText){
+      const target=document.getElementById('lineAdminCard');
+      if(!target){
+        return;
+      }
+
+      target.innerHTML=
+        '<div class="line-admin-login">'+
+          '<div class="line-admin-block-title">管理驗證</div>'+
+          '<div class="muted">輸入本功能專用的管理密碼。密碼只送往 LINE 管理閘道，不會寫入此頁。</div>'+
+          (errorText?'<div class="error" style="margin-top:9px">'+escapeHtml(errorText)+'</div>':'')+
+          '<div class="line-admin-form" style="grid-template-columns:minmax(0,1fr) auto;margin-top:10px">'+
+            '<input class="form-control" id="lineAdminPassword" type="password" autocomplete="current-password" placeholder="LINE 管理密碼">'+
+            '<button class="action action-secondary" id="lineAdminLoginBtn" onclick="loginLineAdmin()">登入</button>'+
+          '</div>'+
+        '</div>';
+
+      const password=document.getElementById('lineAdminPassword');
+      if(password){
+        password.addEventListener('keydown',function(event){
+          if(event.key==='Enter'){
+            loginLineAdmin();
+          }
+        });
+      }
+    }
+
+    function loginLineAdmin(){
+      const input=document.getElementById('lineAdminPassword');
+      const button=document.getElementById('lineAdminLoginBtn');
+      const password=input?input.value:'';
+
+      if(!password){
+        showToast('請輸入 LINE 管理密碼','error');
+        return;
+      }
+
+      if(button){
+        button.disabled=true;
+        button.textContent='登入中...';
+      }
+
+      lineGatewayRequest('/admin/login',{password:password}).then(function(payload){
+        const data=payload&&payload.data?payload.data:{};
+        if(!data.sessionToken){
+          throw new Error('管理驗證未取得工作階段');
+        }
+        saveLineAdminSession(data.sessionToken);
+        if(input){
+          input.value='';
+        }
+        return loadLineAdminOverview();
+      }).catch(function(err){
+        saveLineAdminSession('');
+        renderLineAdminLocked(err.message||'登入失敗');
+      });
+    }
+
+    function logoutLineAdmin(){
+      saveLineAdminSession('');
+      lineAdminData=null;
+      lastLineBindingInstruction='';
+      renderLineAdminLocked('');
+    }
+
+    function lineGatewayRequest(path,body){
+      return fetch(LINE_GATEWAY_BASE+path,{
+        method:'POST',
+        headers:{'content-type':'application/json'},
+        body:JSON.stringify(body||{})
+      }).then(function(response){
+        return response.text().then(function(text){
+          let payload={};
+          try{
+            payload=JSON.parse(text||'{}');
+          }catch(err){
+            payload={ok:false,error:'LINE 管理閘道回傳格式錯誤'};
+          }
+
+          if(!response.ok || !payload || payload.ok!==true){
+            const error=new Error(payload&&payload.error?payload.error:'LINE 管理閘道連線失敗');
+            error.status=response.status;
+            throw error;
+          }
+
+          return payload;
+        });
+      });
+    }
+
+    function lineAdminAction(action,params){
+      const sessionToken=getLineAdminSession();
+      if(!sessionToken){
+        const error=new Error('管理驗證已過期，請重新登入');
+        error.status=401;
+        return Promise.reject(error);
+      }
+
+      return lineGatewayRequest('/admin/action',{
+        sessionToken:sessionToken,
+        action:action,
+        params:params||{}
+      }).then(function(payload){
+        if(payload.sessionToken){
+          saveLineAdminSession(payload.sessionToken);
+        }
+        return payload.data;
+      }).catch(function(err){
+        if(err&&err.status===401){
+          saveLineAdminSession('');
+        }
+        throw err;
+      });
+    }
+
+    function loadLineAdminOverview(){
+      const target=document.getElementById('lineAdminCard');
+      if(!target){
+        return Promise.resolve();
+      }
+
+      target.innerHTML='<div class="loading">載入 LINE 綁定與推播紀錄中...</div>';
+      return lineAdminAction('getLineAdminOverview',{codeLimit:20,logLimit:30}).then(function(data){
+        lineAdminData=data||{};
+        renderLineAdminOverview(lineAdminData);
+      }).catch(function(err){
+        if(err&&err.status===401){
+          renderLineAdminLocked(err.message);
+          return;
+        }
+        target.innerHTML=
+          '<div class="error">LINE 管理資料載入失敗：'+escapeHtml(err.message)+'</div>'+
+          '<div class="line-admin-actions"><button class="action action-secondary" onclick="loadLineAdminOverview()">重試</button>'+
+          '<button class="action action-secondary" onclick="logoutLineAdmin()">重新登入</button></div>';
+      });
+    }
+
+    function renderLineAdminOverview(data){
+      const target=document.getElementById('lineAdminCard');
+      const bindings=Array.isArray(data.bindings)?data.bindings:[];
+      const pending=bindings.filter(function(item){return item.status==='待確認';});
+      const enabled=bindings.filter(function(item){return item.status==='啟用';});
+      const disabled=bindings.filter(function(item){return item.status==='停用';});
+      const logs=Array.isArray(data.pushLogs)?data.pushLogs:[];
+
+      target.innerHTML=
+        '<div class="line-admin-shell">'+
+          '<div class="line-admin-toolbar">'+
+            '<div class="muted">資料時間：'+escapeHtml(data.generatedAt||'尚未更新')+'</div>'+
+            '<div class="line-admin-actions" style="margin-top:0">'+
+              '<button class="action action-secondary" onclick="loadLineAdminOverview()">更新</button>'+
+              '<button class="action action-secondary" onclick="logoutLineAdmin()">登出</button>'+
+            '</div>'+
+          '</div>'+
+          '<div class="line-admin-grid">'+
+            '<div class="line-admin-stat"><strong>'+pending.length+'</strong><span>待確認綁定</span></div>'+
+            '<div class="line-admin-stat"><strong>'+enabled.length+'</strong><span>已啟用人員</span></div>'+
+            '<div class="line-admin-stat"><strong>'+disabled.length+'</strong><span>已停用人員</span></div>'+
+          '</div>'+
+          '<div class="line-admin-block">'+
+            '<div class="line-admin-block-title">產生 30 分鐘綁定碼</div>'+
+            '<div class="line-admin-form">'+
+              '<select class="form-control" id="lineBindingRole">'+
+                '<option value="boss">老闆版</option>'+
+                '<option value="north">溪北</option>'+
+                '<option value="south">溪南</option>'+
+              '</select>'+
+              '<input class="form-control" id="lineBindingPersonName" maxlength="40" placeholder="人員名稱">'+
+              '<button class="action action-secondary" id="lineBindingCodeBtn" onclick="createLineBindingCode()">產生綁定碼</button>'+
+            '</div>'+
+            '<div id="lineBindingCodeResult"></div>'+
+          '</div>'+
+          '<div class="line-admin-block">'+
+            '<div class="line-admin-block-title">待確認綁定</div>'+
+            renderLineBindingCards(pending,'pending')+
+          '</div>'+
+          '<div class="line-admin-block">'+
+            '<div class="line-admin-block-title">已啟用 / 已停用人員</div>'+
+            renderLineBindingCards(enabled.concat(disabled),'managed')+
+          '</div>'+
+          '<div class="line-admin-block">'+
+            '<div class="line-admin-block-title">發送測試</div>'+
+            renderLineTestPushForm(enabled)+
+          '</div>'+
+          '<div class="line-admin-block">'+
+            '<div class="line-admin-block-title">最近推播紀錄</div>'+
+            renderLinePushLogs(logs)+
+          '</div>'+
+        '</div>';
+    }
+
+    function renderLineBindingCards(rows,mode){
+      if(!rows.length){
+        return '<div class="empty">'+(mode==='pending'?'目前沒有待確認綁定。':'目前沒有已啟用或已停用人員。')+'</div>';
+      }
+
+      return '<div class="line-binding-list">'+rows.map(function(item){
+        const statusClass=item.status==='啟用'?'enabled':(item.status==='待確認'?'pending':'disabled');
+        const bindingId=escapeAttr(item.bindingId||'');
+        const role=escapeAttr(item.crmRole||'');
+        const encodedName=escapeAttr(encodeURIComponent(item.personName||'').replace(/'/g,'%27'));
+        let buttons='';
+
+        if(item.status==='待確認'){
+          buttons=
+            '<button class="action action-secondary" onclick="setLineBindingStatus(\''+bindingId+'\',\'confirmLineBinding\')">確認啟用</button>'+
+            '<button class="action action-secondary" onclick="setLineBindingStatus(\''+bindingId+'\',\'disableLineBinding\')">拒絕 / 停用</button>';
+        }else if(item.status==='啟用'){
+          buttons=
+            '<button class="action action-secondary" onclick="selectLineTestRecipient(\''+bindingId+'\')">發送測試</button>'+
+            '<button class="action action-secondary" onclick="setLineBindingStatus(\''+bindingId+'\',\'disableLineBinding\')">停用</button>';
+        }else{
+          buttons='<button class="action action-secondary" onclick="setLineBindingStatus(\''+bindingId+'\',\'enableLineBinding\')">重新啟用</button>';
+        }
+
+        buttons+='<button class="action action-secondary" onclick="prefillLineBindingCode(\''+role+'\',\''+encodedName+'\')">重新綁定</button>';
+
+        return '<div class="line-binding-card '+statusClass+'">'+
+          '<div class="line-binding-head">'+
+            '<div><div class="line-binding-name">'+escapeHtml(item.personName||'未命名')+'｜'+escapeHtml(item.crmRoleLabel||item.crmRole||'未指定')+'</div>'+
+            '<div class="line-binding-meta">LINE：'+escapeHtml(item.lineDisplayName||'未取得顯示名稱')+'｜ID 末六碼 '+escapeHtml(item.lineUserIdSuffix||'—')+
+            '<br>申請 '+escapeHtml(item.appliedAt||'—')+'｜最後測試 '+escapeHtml(item.lastTestAt||'尚未測試')+'</div></div>'+
+            '<span class="line-status '+statusClass+'">'+escapeHtml(item.status||'未知')+'</span>'+
+          '</div>'+
+          '<div class="line-admin-actions">'+buttons+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function renderLineTestPushForm(enabled){
+      if(!enabled.length){
+        return '<div class="empty">尚無已啟用的 LINE 綁定，完成確認後才能發送測試。</div>';
+      }
+
+      return '<div class="line-admin-form test">'+
+        '<select class="form-control" id="lineTestBindingId">'+enabled.map(function(item){
+          return '<option value="'+escapeAttr(item.bindingId||'')+'">'+escapeHtml((item.personName||'未命名')+'｜'+(item.crmRoleLabel||item.crmRole||''))+'</option>';
+        }).join('')+'</select>'+
+        '<input class="form-control" id="lineTestTitle" maxlength="100" value="新晴揚 LINE 測試" placeholder="標題">'+
+        '<textarea class="form-control" id="lineTestContent" maxlength="4500" placeholder="測試訊息內容">這是一則 LINE 推播連線測試。</textarea>'+
+        '<input class="form-control" id="lineTestLink" maxlength="1000" placeholder="連結（選填）">'+
+        '<div class="line-admin-form-actions"><button class="action action-secondary" id="lineTestPushBtn" onclick="sendLineTestPush()">發送測試</button></div>'+
+      '</div>';
+    }
+
+    function renderLinePushLogs(logs){
+      if(!logs.length){
+        return '<div class="empty">尚無推播紀錄。</div>';
+      }
+
+      return '<div class="line-log-list">'+logs.slice(0,30).map(function(item){
+        return '<div class="line-log-card">'+
+          '<div class="line-binding-head"><div class="line-binding-name">'+escapeHtml(item.recipient||'未指定收件人')+'｜'+escapeHtml(item.title||item.pushType||'LINE 推播')+'</div>'+
+          '<span class="line-status '+(item.result==='成功'?'enabled':'pending')+'">'+escapeHtml(item.result||'未知')+'</span></div>'+
+          '<div class="line-log-meta">'+escapeHtml(item.pushedAt||'')+'｜'+escapeHtml(item.crmRoleLabel||item.crmRole||'')+'｜HTTP '+escapeHtml(item.httpStatus||'—')+
+          (item.error?'<br>'+escapeHtml(item.error):'')+'</div>'+
+        '</div>';
+      }).join('')+'</div>';
+    }
+
+    function createLineBindingCode(){
+      const role=document.getElementById('lineBindingRole');
+      const name=document.getElementById('lineBindingPersonName');
+      const button=document.getElementById('lineBindingCodeBtn');
+      const personName=name?name.value.trim():'';
+
+      if(!personName){
+        showToast('請輸入人員名稱','error');
+        return;
+      }
+
+      button.disabled=true;
+      button.textContent='產生中...';
+      lineAdminAction('createLineBindingCode',{
+        crmRole:role?role.value:'',
+        personName:personName,
+        operator:'Boss'
+      }).then(function(result){
+        lastLineBindingInstruction=result.instruction||'';
+        const target=document.getElementById('lineBindingCodeResult');
+        target.innerHTML=
+          '<div class="line-binding-code">'+
+            '<div class="muted">'+escapeHtml(result.personName||personName)+'｜'+escapeHtml(result.crmRoleLabel||'')+'｜到期 '+escapeHtml(result.expiresAt||'')+'</div>'+
+            '<strong>'+escapeHtml(result.code||'')+'</strong>'+
+            '<div>'+escapeHtml(result.instruction||'')+'</div>'+
+            '<div class="line-admin-actions"><button class="action action-secondary" onclick="copyLineBindingInstruction()">複製綁定指令</button></div>'+
+          '</div>';
+        showToast('綁定碼已產生');
+      }).catch(handleLineAdminError).finally(function(){
+        button.disabled=false;
+        button.textContent='產生綁定碼';
+      });
+    }
+
+    function copyLineBindingInstruction(){
+      if(!lastLineBindingInstruction){
+        return;
+      }
+      navigator.clipboard.writeText(lastLineBindingInstruction).then(function(){
+        showToast('已複製綁定指令');
+      }).catch(function(){
+        showToast('無法自動複製，請手動選取','error');
+      });
+    }
+
+    function prefillLineBindingCode(role,encodedName){
+      const roleInput=document.getElementById('lineBindingRole');
+      const nameInput=document.getElementById('lineBindingPersonName');
+      if(roleInput){
+        roleInput.value=role;
+      }
+      if(nameInput){
+        nameInput.value=decodeURIComponent(encodedName||'');
+        nameInput.focus();
+      }
+      document.getElementById('lineAdminSection').scrollIntoView({behavior:'smooth',block:'start'});
+    }
+
+    function setLineBindingStatus(bindingId,action){
+      const labels={
+        confirmLineBinding:'確認啟用',
+        enableLineBinding:'重新啟用',
+        disableLineBinding:'停用'
+      };
+      if(!confirm('確定要'+(labels[action]||'更新')+'這筆 LINE 綁定？')){
+        return;
+      }
+
+      lineAdminAction(action,{bindingId:bindingId,operator:'Boss'}).then(function(){
+        showToast('LINE 綁定狀態已更新');
+        return loadLineAdminOverview();
+      }).catch(handleLineAdminError);
+    }
+
+    function selectLineTestRecipient(bindingId){
+      const select=document.getElementById('lineTestBindingId');
+      if(select){
+        select.value=bindingId;
+        select.scrollIntoView({behavior:'smooth',block:'center'});
+      }
+    }
+
+    function sendLineTestPush(){
+      const binding=document.getElementById('lineTestBindingId');
+      const title=document.getElementById('lineTestTitle');
+      const content=document.getElementById('lineTestContent');
+      const link=document.getElementById('lineTestLink');
+      const button=document.getElementById('lineTestPushBtn');
+
+      if(!binding||!binding.value||!content||!content.value.trim()){
+        showToast('請選擇收件人並輸入測試內容','error');
+        return;
+      }
+
+      if(!confirm('確定要發送這則 LINE 測試訊息？')){
+        return;
+      }
+
+      button.disabled=true;
+      button.textContent='發送中...';
+      lineAdminAction('sendLineTestPush',{
+        bindingId:binding.value,
+        title:title?title.value.trim():'',
+        content:content.value.trim(),
+        link:link?link.value.trim():'',
+        operator:'Boss'
+      }).then(function(result){
+        if(!result||result.success!==true){
+          throw new Error(result&&result.message?result.message:'測試推播失敗');
+        }
+        showToast(result.message||'測試推播已送出');
+        return loadLineAdminOverview();
+      }).catch(handleLineAdminError).finally(function(){
+        if(button&&document.body.contains(button)){
+          button.disabled=false;
+          button.textContent='發送測試';
+        }
+      });
+    }
+
+    function handleLineAdminError(err){
+      if(err&&err.status===401){
+        saveLineAdminSession('');
+        renderLineAdminLocked(err.message);
+        return;
+      }
+      showToast('LINE 操作失敗：'+(err&&err.message?err.message:'未知錯誤'),'error');
     }
 
     function jsonp(params){
