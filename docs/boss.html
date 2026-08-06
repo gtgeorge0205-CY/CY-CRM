@@ -258,6 +258,7 @@
     .line-admin-block{border:1px solid var(--line-soft);border-radius:8px;background:rgba(7,12,18,.4);padding:11px}
     .line-admin-block-title{font-size:14px;font-weight:950;color:#fff;margin-bottom:8px}
     .line-admin-form{display:grid;grid-template-columns:180px minmax(0,1fr) auto;gap:8px;align-items:start}
+    .line-admin-login-grid{grid-template-columns:minmax(0,1fr) auto;margin-top:10px}
     .line-admin-form.test{grid-template-columns:220px minmax(0,1fr)}
     .line-admin-form.test textarea,.line-admin-form.test .line-admin-form-actions{grid-column:1/-1}
     .line-binding-code{margin-top:10px;border:1px solid rgba(0,229,192,.36);border-radius:8px;background:rgba(0,229,192,.08);padding:11px}
@@ -634,6 +635,9 @@
       .line-admin-form.test{
         grid-template-columns:1fr;
       }
+      .line-admin-login-grid{
+        grid-template-columns:1fr;
+      }
       .line-admin-form.test textarea,
       .line-admin-form.test .line-admin-form-actions{
         grid-column:auto;
@@ -955,10 +959,10 @@
             <div class="workspace-hero">
               <div class="section-kicker">回報訊號</div>
               <h2 class="workspace-title">現場回報與訊號雷達</h2>
-              <div class="workspace-desc">查看近兩日正式業務回報，或聚焦機會、異常、客戶變化。這裡是訊號，不是待辦。</div>
+              <div class="workspace-desc">查看近48小時正式業務回報，或聚焦機會、異常、客戶變化。這裡是訊號，不是待辦。</div>
             </div>
             <div class="workspace-tools" id="reportWorkspaceTabs">
-              <button class="workspace-chip active" data-report-view="recent">近兩日回報</button>
+              <button class="workspace-chip active" data-report-view="recent">近48小時回報</button>
               <button class="workspace-chip" data-report-view="signals" data-signal-filter="all">全部訊號</button>
               <button class="workspace-chip" data-report-view="signals" data-signal-filter="opportunity">機會</button>
               <button class="workspace-chip" data-report-view="signals" data-signal-filter="abnormal">異常</button>
@@ -968,7 +972,7 @@
               <div class="section-head">
                 <div>
                   <div class="section-kicker">現場回報</div>
-                  <h2 class="section-title">近兩日現場回報</h2>
+                  <h2 class="section-title">近48小時現場回報</h2>
                   <div class="section-desc">最近 48 小時業務原始回報流水。</div>
                 </div>
               </div>
@@ -1255,6 +1259,7 @@
     const API_TOKEN='CYCRM_2026_write_test';
     const LINE_GATEWAY_BASE='https://xinqingyang-line-gateway.gtgeorge0205.workers.dev';
     const LINE_GATEWAY_SESSION_KEY='xqy_line_admin_session_v1';
+    const LINE_GATEWAY_TRUSTED_SESSION_KEY='xqy_line_admin_trusted_session_v1';
     const JSONP_TIMEOUT_MS=20000;
     let dashboardData=null;
     let customers=[];
@@ -1278,6 +1283,8 @@
     let salesNoticesLoaded=false;
     let salesNoticeEditingId='';
     let lineAdminData=null;
+    let lineAdminRememberDevice=false;
+    let lineAdminSessionSource='';
     let lastLineBindingInstruction='';
     const modalSnapshots={
       report:'',
@@ -2181,8 +2188,9 @@
     }
 
     function renderMetrics(summary){
+      const recent48Count=getNumberField(summary,'recent48HourReportCount','todayReportCount');
       const items=[
-        {label:'今日回報',value:toMetricNumber(summary.todayReportCount),note:'正式業務回報',type:'reports',filter:'today'},
+        {label:'近48小時回報',value:recent48Count,note:'滾動48小時正式回報',type:'reports',filter:'recent48h'},
         {label:'待補回報',value:toMetricNumber(summary.pendingDraftCount),note:'需要業務補內容',type:'reports',filter:'pendingDrafts',warning:toMetricNumber(summary.pendingDraftCount)>0},
         {label:'待指定客戶',value:toMetricNumber(summary.unmatchedDraftCount),note:'需管理端處理',type:'reports',filter:'pendingAssignedCustomers',warning:toMetricNumber(summary.unmatchedDraftCount)>0},
         {label:'訊號雷達',value:toMetricNumber(summary.signalRadarCount),note:'近30天機會 / 異常 / 變化',type:'signals',filter:'all'},
@@ -2290,11 +2298,12 @@
 
       const codeMap={'溪南':'溪南區','溪北':'溪北區','其他':'其他'};
       document.getElementById('ownerSummary').innerHTML=rows.map(function(row){
+        const recent48Count=getNumberField(row,'recent48HourReportCount','todayReportCount');
         return '<div class="sector-card">'+
           '<div class="sector-code">'+escapeHtml(codeMap[row.ownerName]||'OTHER SECTOR')+'</div>'+
           '<div class="sector-name">'+escapeHtml(row.ownerName||'其他')+'</div>'+
           '<div class="sector-stats">'+
-            '<div class="sector-stat"><strong>'+num(row.todayReportCount)+'</strong><span>今日回報</span></div>'+
+            '<div class="sector-stat"><strong>'+num(recent48Count)+'</strong><span>近48小時</span></div>'+
             '<div class="sector-stat"><strong>'+num(row.pendingDraftCount)+'</strong><span>待補</span></div>'+
             '<div class="sector-stat"><strong>'+num(row.unmatchedDraftCount)+'</strong><span>待指定</span></div>'+
           '</div>'+
@@ -2763,7 +2772,7 @@
           renderOwnerReportCounts(byOwner)+
           (reports.length
             ? '<div>'+shown.map(renderReportCard).join('')+'</div>'+toggle
-            : '<div class="empty">近兩日尚無業務回報。</div>');
+            : '<div class="empty">近48小時尚無業務回報。</div>');
 
         bindReportThreadButtons(target);
         bindSignalFollowupButtons(target);
@@ -3958,7 +3967,7 @@
       if(['followups','shortFollowup','needFollowup'].indexOf(normalizedType)!==-1) return '追蹤提醒';
       if(['reminders','supervisorReminders'].indexOf(normalizedType)!==-1) return '主管提醒';
       if(['signals','actionSignals','quickTags'].indexOf(normalizedType)!==-1) return getSignalFilterLabel(filter);
-      if((normalizedType==='reports' || normalizedType==='report' || normalizedType==='todayReports') && (normalizedFilter==='today' || normalizedType==='todayReports')) return '今日回報';
+      if((normalizedType==='reports' || normalizedType==='report' || normalizedType==='todayReports') && (normalizedFilter==='recent48h' || normalizedFilter==='today' || normalizedType==='todayReports')) return '近48小時回報';
       if((normalizedType==='reports' || normalizedType==='report') && normalizedFilter==='pendingDrafts') return '待補回報';
       if((normalizedType==='reports' || normalizedType==='report') && (normalizedFilter==='pendingAssignedCustomers' || normalizedFilter==='pendingCustomers')) return '待指定客戶';
       return '明細';
@@ -3967,8 +3976,11 @@
     function getDrilldownRows(type,filter){
       const data=dashboardData||{};
 
-      if(type==='reports' && filter==='today'){
-        return {kind:'report',title:'今日回報',filterLabel:'今天正式業務回報',rows:data.todayReports||[]};
+      if((type==='reports' || type==='report' || type==='todayReports') && (filter==='recent48h' || filter==='today' || type==='todayReports')){
+        const rows=(data.reportSummary&&Array.isArray(data.reportSummary.reports))
+          ? data.reportSummary.reports
+          : (Array.isArray(data.recent48HourReports) ? data.recent48HourReports : (Array.isArray(data.todayReports) ? data.todayReports : []));
+        return {kind:'report',title:'近48小時回報',filterLabel:'最近48小時正式業務回報',rows:rows};
       }
       if(type==='reports' && filter==='pendingDrafts'){
         return {kind:'draft',title:'待補回報',filterLabel:'待補內容草稿',rows:data.pendingDrafts||[]};
@@ -4602,7 +4614,12 @@
       renderLineAdminLocked('');
 
       if(token){
-        loadLineAdminOverview();
+        validateLineAdminSession().then(function(){
+          return loadLineAdminOverview();
+        }).catch(function(err){
+          clearLineAdminSessions();
+          renderLineAdminLocked(err&&err.message?err.message:'登入已失效，請重新登入');
+        });
       }
     }
 
@@ -4691,6 +4708,165 @@
       renderLineAdminLocked('');
     }
 
+    function getStoredLineAdminSession(){
+      try{
+        const sessionToken=sessionStorage.getItem(LINE_GATEWAY_SESSION_KEY)||'';
+        if(sessionToken){
+          lineAdminSessionSource='session';
+          lineAdminRememberDevice=false;
+          return {token:sessionToken,rememberDevice:false,source:'session'};
+        }
+      }catch(err){
+        console.log('LINE session storage unavailable');
+      }
+
+      try{
+        const trustedToken=localStorage.getItem(LINE_GATEWAY_TRUSTED_SESSION_KEY)||'';
+        if(trustedToken){
+          lineAdminSessionSource='local';
+          lineAdminRememberDevice=true;
+          return {token:trustedToken,rememberDevice:true,source:'local'};
+        }
+      }catch(err){
+        console.log('LINE trusted storage unavailable');
+      }
+
+      lineAdminSessionSource='';
+      lineAdminRememberDevice=false;
+      return {token:'',rememberDevice:false,source:''};
+    }
+
+    function getLineAdminSession(){
+      return getStoredLineAdminSession().token;
+    }
+
+    function isLineAdminTrustedSession(){
+      const stored=getStoredLineAdminSession();
+      return stored.source==='local' || stored.rememberDevice===true || lineAdminRememberDevice===true;
+    }
+
+    function saveLineAdminSession(token,rememberDevice){
+      const useTrusted=rememberDevice===true;
+      try{
+        sessionStorage.removeItem(LINE_GATEWAY_SESSION_KEY);
+      }catch(err){
+        console.log('LINE session storage unavailable');
+      }
+      try{
+        if(token && useTrusted){
+          localStorage.setItem(LINE_GATEWAY_TRUSTED_SESSION_KEY,token);
+        }else{
+          localStorage.removeItem(LINE_GATEWAY_TRUSTED_SESSION_KEY);
+        }
+      }catch(err){
+        console.log('LINE trusted storage unavailable');
+      }
+
+      if(token && !useTrusted){
+        try{
+          sessionStorage.setItem(LINE_GATEWAY_SESSION_KEY,token);
+        }catch(err){
+          console.log('LINE session storage unavailable');
+        }
+      }
+
+      lineAdminRememberDevice=!!(token && useTrusted);
+      lineAdminSessionSource=token?(useTrusted?'local':'session'):'';
+    }
+
+    function clearLineAdminSessions(){
+      try{
+        sessionStorage.removeItem(LINE_GATEWAY_SESSION_KEY);
+      }catch(err){
+        console.log('LINE session storage unavailable');
+      }
+      try{
+        localStorage.removeItem(LINE_GATEWAY_TRUSTED_SESSION_KEY);
+      }catch(err){
+        console.log('LINE trusted storage unavailable');
+      }
+      lineAdminRememberDevice=false;
+      lineAdminSessionSource='';
+    }
+
+    function renderLineAdminLocked(errorText){
+      const target=document.getElementById('lineAdminCard');
+      if(!target){
+        return;
+      }
+
+      target.innerHTML=
+        '<div class="line-admin-login">'+
+          '<div class="line-admin-block-title">LINE 管理驗證</div>'+
+          '<div class="muted">第一次操作 LINE 推播管理前，請輸入獨立管理密碼。私人裝置可選擇記住 30 天，共用電腦請勿勾選。</div>'+
+          (errorText?'<div class="error" style="margin-top:9px">'+escapeHtml(errorText)+'</div>':'')+
+          '<div class="line-admin-form line-admin-login-grid">'+
+            '<input class="form-control" id="lineAdminPassword" type="password" autocomplete="current-password" placeholder="LINE 管理密碼">'+
+            '<button class="action action-secondary" id="lineAdminLoginBtn" onclick="loginLineAdmin()">登入</button>'+
+          '</div>'+
+          '<label class="line-admin-remember" style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;color:var(--silver);font-size:13px;line-height:1.45">'+
+            '<input id="lineAdminRememberDevice" type="checkbox" style="margin-top:2px;accent-color:var(--teal)">'+
+            '<span><strong style="color:#fff">記住這台裝置 30 天</strong><br><span class="muted">私人裝置可勾選；共用電腦請勿勾選</span></span>'+
+          '</label>'+
+        '</div>';
+
+      const password=document.getElementById('lineAdminPassword');
+      if(password){
+        password.addEventListener('keydown',function(event){
+          if(event.key==='Enter'){
+            loginLineAdmin();
+          }
+        });
+      }
+    }
+
+    function loginLineAdmin(){
+      const input=document.getElementById('lineAdminPassword');
+      const remember=document.getElementById('lineAdminRememberDevice');
+      const button=document.getElementById('lineAdminLoginBtn');
+      const password=input?input.value:'';
+      const rememberDevice=!!(remember&&remember.checked);
+
+      if(!password){
+        showToast('請輸入 LINE 管理密碼','error');
+        return;
+      }
+
+      if(button){
+        button.disabled=true;
+        button.textContent='登入中...';
+      }
+
+      lineGatewayRequest('/admin/login',{password:password,rememberDevice:rememberDevice}).then(function(payload){
+        const data=payload&&payload.data?payload.data:{};
+        if(!data.sessionToken){
+          throw new Error('管理驗證未取得工作階段');
+        }
+        saveLineAdminSession(data.sessionToken,rememberDevice);
+        if(input){
+          input.value='';
+        }
+        showToast(rememberDevice?'已登入，這台裝置 30 天內免重新輸入密碼':'已登入，本次瀏覽階段有效');
+        return loadLineAdminOverview();
+      }).catch(function(err){
+        clearLineAdminSessions();
+        renderLineAdminLocked(err.message||'登入失敗');
+      }).finally(function(){
+        if(button&&document.body.contains(button)){
+          button.disabled=false;
+          button.textContent='登入';
+        }
+      });
+    }
+
+    function logoutLineAdmin(){
+      clearLineAdminSessions();
+      lineAdminData=null;
+      lastLineBindingInstruction='';
+      renderLineAdminLocked('');
+      showToast('已登出 LINE 管理，並取消信任此裝置');
+    }
+
     function lineGatewayRequest(path,body){
       return fetch(LINE_GATEWAY_BASE+path,{
         method:'POST',
@@ -4730,13 +4906,23 @@
         params:params||{}
       }).then(function(payload){
         if(payload.sessionToken){
-          saveLineAdminSession(payload.sessionToken);
+          saveLineAdminSession(payload.sessionToken,isLineAdminTrustedSession() || payload.rememberDevice===true);
         }
         return payload.data;
       }).catch(function(err){
         if(err&&err.status===401){
-          saveLineAdminSession('');
+          clearLineAdminSessions();
         }
+        throw err;
+      });
+    }
+
+    function validateLineAdminSession(){
+      return lineAdminAction('validateSession',{}).then(function(result){
+        return result||{sessionValid:true};
+      }).catch(function(err){
+        clearLineAdminSessions();
+        err.message='\u767b\u5165\u5df2\u5931\u6548\uff0c\u8acb\u91cd\u65b0\u767b\u5165';
         throw err;
       });
     }
@@ -4753,7 +4939,8 @@
         renderLineAdminOverview(lineAdminData);
       }).catch(function(err){
         if(err&&err.status===401){
-          renderLineAdminLocked(err.message);
+          clearLineAdminSessions();
+          renderLineAdminLocked('\u767b\u5165\u5df2\u5931\u6548\uff0c\u8acb\u91cd\u65b0\u767b\u5165');
           return;
         }
         target.innerHTML=
@@ -4777,7 +4964,7 @@
             '<div class="muted">資料時間：'+escapeHtml(data.generatedAt||'尚未更新')+'</div>'+
             '<div class="line-admin-actions" style="margin-top:0">'+
               '<button class="action action-secondary" onclick="loadLineAdminOverview()">更新</button>'+
-              '<button class="action action-secondary" onclick="logoutLineAdmin()">登出</button>'+
+              '<button class="action action-secondary" onclick="logoutLineAdmin()">登出／取消信任此裝置</button>'+
             '</div>'+
           '</div>'+
           '<div class="line-admin-grid">'+
@@ -5008,8 +5195,8 @@
 
     function handleLineAdminError(err){
       if(err&&err.status===401){
-        saveLineAdminSession('');
-        renderLineAdminLocked(err.message);
+        clearLineAdminSessions();
+        renderLineAdminLocked('\u767b\u5165\u5df2\u5931\u6548\uff0c\u8acb\u91cd\u65b0\u767b\u5165');
         return;
       }
       showToast('LINE 操作失敗：'+(err&&err.message?err.message:'未知錯誤'),'error');
@@ -5070,6 +5257,17 @@
     function toMetricNumber(value){
       const n=Number(value);
       return isFinite(n) ? n : 0;
+    }
+
+    function getNumberField(source,primaryKey,fallbackKey){
+      source=source||{};
+      if(Object.prototype.hasOwnProperty.call(source,primaryKey)){
+        return toMetricNumber(source[primaryKey]);
+      }
+      if(Object.prototype.hasOwnProperty.call(source,fallbackKey)){
+        return toMetricNumber(source[fallbackKey]);
+      }
+      return 0;
     }
 
     function formatMetricValue(value){
